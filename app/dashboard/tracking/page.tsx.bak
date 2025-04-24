@@ -1,0 +1,1356 @@
+"use client";
+
+import React, { useState, useEffect, useCallback, useMemo } from "react";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { 
+  Package, Search, User, Truck, MapPin, Clock, 
+  ArrowRight, Calendar, DollarSign, FileText,
+  Building2, Scale, Box, AlertTriangle, Clipboard, Trash2, X, Shield, Check, ChevronsUpDown, Loader2,
+  History, ClipboardList, Receipt, Info, Files, Plane, Activity, Weight, MapPinned
+} from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Spinner } from "@/components/ui/spinner";
+import { TrackingService } from "@/app/services/tracking.service";
+import { customToast } from "@/app/components/ui/custom-toast";
+import { useRouter } from "next/navigation";
+import { UsersService } from "@/app/services/users.service";
+import { Label } from "@/components/ui/label";
+import { motion, AnimatePresence } from 'framer-motion';
+import { useNotifications } from '@/app/hooks/useNotifications';
+import { packagesService } from '@/app/services/packages.service';
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Command, CommandInput, CommandEmpty, CommandGroup, CommandItem } from "@/components/ui/command";
+import { InvoicesService } from "@/app/services/invoices.service";
+
+interface FirebaseUser {
+  id: string;
+  firstName?: string;
+  lastName?: string;
+  email: string;
+  branchReference: {
+    path: string;
+    id: string;
+  };
+  subscriptionPlan: {
+    path: string;
+    id: string;
+  };
+  typeUserReference: {
+    path: string;
+    id: string;
+  };
+  walletReference: {
+    path: string;
+    id: string;
+  };
+  accountStatus: boolean;
+  personType: 'natural' | 'juridica';
+  isEmailVerified: boolean;
+  isVerified: boolean;
+  planRate: number;
+  walletName: string;
+  walletAmount: number;
+}
+
+interface PackageInfo {
+  tracking: string;
+  status: string;
+  statusName: string;
+  total_weight: number;
+  vol_weight: number;
+  dimensions: {
+    length: number;
+    width: number;
+    height: number;
+    unit: string;
+  };
+  shipping: {
+    mode: string;
+    carrier: string;
+    estimated_delivery: string;
+  };
+  insurance: boolean;
+  created_at: string;
+  userReference?: string;
+  client?: {
+    id: string;
+    name: string;
+    email: string;
+    planRate: number;
+  };
+}
+
+const ScanAnimation = ({ message }: { message: string }) => (
+  <div className="relative flex flex-col items-center justify-center p-8">
+    <div className="absolute inset-0 bg-gradient-to-br from-primary/20 via-purple-500/20 to-blue-500/20 rounded-3xl blur-3xl animate-pulse" />
+    <div className="relative space-y-8">
+      <div className="relative w-32 h-32 mx-auto">
+        <div className="absolute inset-0 bg-gradient-to-r from-primary/20 to-purple-500/20 rounded-full blur-xl animate-pulse" />
+        <div className="relative bg-background/80 backdrop-blur-sm rounded-full p-8 border border-primary/10 shadow-2xl">
+          <div className="relative animate-bounce">
+            <div className="absolute inset-0 bg-gradient-to-br from-primary/20 to-purple-500/20 rounded-full blur-md" />
+            <Package className="w-16 h-16 text-primary animate-pulse" />
+                </div>
+                </div>
+              </div>
+      <div className="relative w-64 h-1 mx-auto overflow-hidden rounded-full bg-primary/5">
+        <div className="absolute inset-0 bg-gradient-to-r from-primary via-purple-500 to-primary rounded-full animate-scan" />
+                </div>
+      <div className="text-center space-y-2">
+        <h3 className="text-xl font-semibold bg-gradient-to-r from-primary to-purple-600 bg-clip-text text-transparent">
+          Escaneando Paquete
+        </h3>
+        <p className="text-sm text-muted-foreground animate-pulse">
+                {message}
+        </p>
+            </div>
+          </div>
+        </div>
+);
+
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+
+const getISOString = (date: Date | string | undefined): string => {
+  if (!date) return new Date().toISOString();
+  if (typeof date === 'string') return date;
+  return date.toISOString();
+};
+
+/**
+ * Obtiene una cookie por su nombre
+ * @param name Nombre de la cookie
+ * @returns Valor de la cookie o null si no existe
+ */
+function getCookie(name: string): string | null {
+  if (typeof document === 'undefined') {
+    return null; // Estamos en el servidor
+  }
+  
+  const cookies = document.cookie.split(';');
+  for (let i = 0; i < cookies.length; i++) {
+    const cookie = cookies[i].trim();
+    if (cookie.startsWith(name + '=')) {
+      return cookie.substring(name.length + 1);
+    }
+  }
+  return null;
+}
+
+const TrackingPage: React.FC = () => {
+  const [trackingNumber, setTrackingNumber] = useState("");
+  const [packageInfo, setPackageInfo] = useState<PackageInfo | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [isScanning, setIsScanning] = useState(false);
+  const [scanMessage, setScanMessage] = useState("");
+  const { isConnected } = useNotifications();
+  const [isSearchOpen, setIsSearchOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [searchResults, setSearchResults] = useState<FirebaseUser[]>([]);
+  const [isSearching, setIsSearching] = useState(false);
+  const [allClients, setAllClients] = useState<FirebaseUser[]>([]);
+  const [filteredClients, setFilteredClients] = useState<FirebaseUser[]>([]);
+  const [isLoadingClients, setIsLoadingClients] = useState(false);
+  const [showOnlyActive, setShowOnlyActive] = useState(true);
+  const [packagesToInvoice, setPackagesToInvoice] = useState<PackageInfo[]>([]);
+  const [isInvoiceDialogOpen, setIsInvoiceDialogOpen] = useState(false);
+
+  const messages = [
+    "Iniciando escaneo...",
+    "Conectando con el servidor...",
+    "Verificando código...",
+    "Procesando información...",
+    "Analizando datos...",
+    "Casi listo..."
+  ];
+
+  useEffect(() => {
+    if (isScanning) {
+      let currentIndex = 0;
+      const interval = setInterval(() => {
+        setScanMessage(messages[currentIndex]);
+        currentIndex = (currentIndex + 1) % messages.length;
+      }, 2000);
+
+      return () => clearInterval(interval);
+    }
+  }, [isScanning, messages]);
+
+  // Cargar clientes al abrir el diálogo
+  useEffect(() => {
+    if (isSearchOpen) {
+      loadClients();
+    }
+  }, [isSearchOpen]);
+
+    const loadClients = async () => {
+    try {
+      setIsLoadingClients(true);
+      const clients = await UsersService.getActiveClients();
+      setAllClients(clients);
+      setFilteredClients(clients);
+      } catch (error) {
+        console.error('Error al cargar clientes:', error);
+        customToast.error({
+          title: "Error",
+        description: "No se pudieron cargar los clientes"
+        });
+      } finally {
+        setIsLoadingClients(false);
+      }
+    };
+
+  const handleSearch = (value: string) => {
+    setSearchQuery(value);
+    
+    // Primero filtramos por estado (activo/inactivo)
+    let filtered = allClients;
+    if (showOnlyActive) {
+      filtered = allClients.filter(client => client.accountStatus === true);
+    }
+
+    // Luego aplicamos el filtro de búsqueda
+    if (value.trim()) {
+      const searchTerm = value.toLowerCase();
+      filtered = filtered.filter((client) => {
+        const fullName = `${client.firstName || ''} ${client.lastName || ''}`.toLowerCase();
+        const email = (client.email || '').toLowerCase();
+        const branchId = client.branchReference?.id || '';
+        
+        return fullName.includes(searchTerm) || 
+               email.includes(searchTerm) || 
+               branchId.includes(searchTerm);
+      });
+    }
+    
+    setFilteredClients(filtered);
+  };
+
+  // Actualizar también cuando cambie showOnlyActive
+  useEffect(() => {
+    handleSearch(searchQuery);
+  }, [showOnlyActive]);
+
+  const handleScan = async (value: string) => {
+    try {
+      setTrackingNumber(value);
+      if (!value) return;
+
+      setLoading(true);
+      setIsScanning(true);
+      setScanMessage(`Buscando paquete ${value}...`);
+
+      try {
+        // Obtener el token de autenticación
+        const token = getCookie('workexpress_token');
+
+        if (!token) {
+          throw new Error('Sesión expirada o no válida');
+        }
+
+        // Verificar si el paquete ya está facturado
+        try {
+          const verifyResult = await InvoicesService.verifyPackage(value);
+          console.log('🧾 Verificación de factura:', verifyResult);
+          
+          if (verifyResult.isInvoiced) {
+            customToast.error({
+              title: "Paquete facturado",
+              description: `Este paquete ya ha sido facturado. Factura: ${verifyResult.invoiceDetails?.invoice_number || 'Desconocida'}`,
+            });
+            setTrackingNumber('');
+            setLoading(false);
+            setIsScanning(false);
+            return;
+          }
+        } catch (verifyError: any) {
+          console.error('Error al verificar factura:', verifyError);
+          
+          // Si el error contiene información sobre un paquete ya facturado
+          if (verifyError.message && verifyError.message.includes('facturado')) {
+            customToast.error({
+              title: "Paquete Ya Facturado",
+              description: verifyError.message
+            });
+            setTrackingNumber('');
+            setLoading(false);
+            setIsScanning(false);
+            return;
+          }
+          
+          // Si es un error de autenticación, mostrar mensaje específico
+          if (verifyError.message && verifyError.message.includes('token')) {
+            throw new Error('Sesión expirada o no válida');
+          }
+          
+          // Para otros errores, continuamos con el flujo
+        }
+
+        // Búsqueda local
+        setScanMessage(`Buscando información del paquete...`);
+        const packageInfo = await trackingService.getTrackingInfo(value);
+        
+        // Obtener detalles del historial
+        setScanMessage(`Obteniendo historial del paquete...`);
+        const trackingLogs = await trackingService.getTrackingLogs(value);
+
+        // Combinar la información
+        setPackageInfo({
+          tracking: packageInfo.tracking,
+          status: packageInfo.status,
+          statusName: packageInfo.statusName,
+          weight: parseFloat(packageInfo.totalWeight),
+          volWeight: parseFloat(packageInfo.volWeight),
+          dimensions: {
+            length: packageInfo.dimensions.length,
+            width: packageInfo.dimensions.width,
+            height: packageInfo.dimensions.height,
+            unit: packageInfo.dimensions.unit
+          },
+          history: trackingLogs || [],
+          userReference: packageInfo.userReference,
+          client: packageInfo.client?.id ? {
+            id: packageInfo.client.id,
+            name: packageInfo.client.name,
+            email: packageInfo.client.email,
+            planRate: 0 // Esto se actualizará cuando se asigne un cliente
+          } : undefined
+        });
+
+        setLoading(false);
+        setIsScanning(false);
+        customToast.success({
+          title: "Paquete encontrado",
+          description: `Paquete ${value} encontrado con éxito`
+        });
+      } catch (error) {
+        console.error('Error en handleScan:', error);
+        setLoading(false);
+        setIsScanning(false);
+        
+        let errorMessage = "Hubo un error al buscar el paquete";
+        if (error instanceof Error) {
+          errorMessage = error.message;
+        }
+        
+        customToast.error({
+          title: "Error",
+          description: errorMessage
+        });
+        
+        setPackageInfo(null);
+        setTrackingNumber('');
+      }
+    } catch (mainError) {
+      console.error('Error general en handleScan:', mainError);
+      setLoading(false);
+      setIsScanning(false);
+      customToast.error({
+        title: "Error",
+        description: "Ocurrió un error inesperado"
+      });
+      setPackageInfo(null);
+      setTrackingNumber('');
+    }
+  };
+
+  const handleSelectClient = async (user: FirebaseUser) => {
+    if (!packageInfo?.tracking) return;
+
+    try {
+      // Obtener el ID del plan desde la referencia
+      const planId = user.subscriptionPlan.id;
+      console.log('🔍 Buscando plan:', planId);
+
+      // Obtener los datos del plan
+      const planData = await UsersService.getPlanRate(planId);
+      console.log('📋 Datos del plan:', planData);
+
+      // Primero obtener el paquete para tener el packageId
+      console.log('🔍 Buscando paquete con tracking:', packageInfo.tracking);
+      const existingPackage = await packagesService.findByTracking(packageInfo.tracking);
+      
+      if (!existingPackage) {
+        console.error('❌ No se encontró el paquete en la base de datos');
+        setLoading(false);
+        customToast.error({
+          title: "Error",
+          description: "No se pudo encontrar el paquete en la base de datos"
+        });
+        return;
+      }
+
+      if (!existingPackage.packageId && !existingPackage.id) {
+        console.error('❌ El paquete no tiene ID:', existingPackage);
+        throw new Error('No se pudo encontrar el ID del paquete');
+      }
+
+      // Usar id o packageId según lo que esté disponible
+      const packageId = existingPackage.packageId || existingPackage.id;
+      console.log('📦 Package ID:', packageId);
+
+      // Asignar el usuario al paquete usando el packageId correcto
+      await packagesService.assignUserToPackage(packageId, user.id);
+
+      // Actualizar el estado local con el precio del plan
+      setPackageInfo(prev => {
+        if (!prev) return null;
+        return {
+          ...prev,
+          userReference: `/users/${user.id}`,
+          client: {
+            id: user.id,
+            name: `${user.firstName} ${user.lastName}`,
+            email: user.email,
+            planRate: planData.price || 0
+          }
+        };
+      });
+
+      customToast.success({
+        title: "Cliente Asignado",
+        description: `Cliente asignado con tarifa de $${planData.price}/lb`
+      });
+
+      setIsSearchOpen(false);
+    } catch (error) {
+      console.error('Error al asignar cliente:', error);
+      customToast.error({
+        title: "Error",
+        description: error instanceof Error ? error.message : "No se pudo asignar el cliente al paquete"
+      });
+    }
+  };
+
+  const handleAddToInvoice = () => {
+    if (!packageInfo) return;
+    
+    // Verificar si el paquete ya está en la lista
+    if (packagesToInvoice.some(p => p.tracking === packageInfo.tracking)) {
+      customToast.warning({
+        title: "Paquete Duplicado",
+        description: "Este paquete ya está en la lista de facturación"
+      });
+      return;
+    }
+
+    // Verificar si el paquete tiene cliente asignado
+    if (!packageInfo.client) {
+      customToast.error({
+        title: "Error",
+        description: "Debe asignar un cliente antes de agregar a facturación"
+      });
+      return;
+    }
+
+    setPackagesToInvoice(prev => [...prev, packageInfo]);
+    customToast.success({
+      title: "Paquete Agregado",
+      description: "El paquete se agregó a la lista de facturación"
+    });
+  };
+
+  const handleRemoveFromInvoice = (tracking: string) => {
+    setPackagesToInvoice(prev => prev.filter(p => p.tracking !== tracking));
+    customToast.success({
+      title: "Paquete Removido",
+      description: "El paquete se eliminó de la lista de facturación"
+    });
+  };
+
+  const handleCreateInvoice = async () => {
+    if (packagesToInvoice.length === 0) {
+      customToast.warning({
+        title: "Lista Vacía",
+        description: "Agregue paquetes a la lista antes de facturar"
+      });
+      return;
+    }
+
+    try {
+      // Agrupar paquetes por cliente
+      const packagesByClient = packagesToInvoice.reduce((acc, pkg) => {
+        if (!pkg.client?.id) return acc;
+        if (!acc[pkg.client.id]) {
+          acc[pkg.client.id] = [];
+        }
+        acc[pkg.client.id].push(pkg);
+        return acc;
+      }, {} as Record<string, any[]>);
+
+      // Crear una factura por cada cliente
+      for (const [clientId, packages] of Object.entries(packagesByClient)) {
+        const invoice_number = `INV-${Date.now()}-${clientId}`;
+        
+        // Preparar los items de la factura
+        const invoice_items = packages.map(pkg => {
+          // Calcular el precio basado en el peso y la tarifa del cliente
+          const weight = pkg.total_weight || 0;
+          const rate = pkg.client?.planRate || 0;
+          const price = weight * rate;
+
+          return {
+            name: `Envío - ${pkg.tracking}`,
+            description: `Servicio de envío para paquete ${pkg.tracking} (${weight} lb x $${rate}/lb)`,
+            quantity: 1,
+            price: parseFloat(price.toFixed(2))
+          };
+        });
+
+        // Validar que todos los items tengan los datos necesarios
+        const invalidItems = invoice_items.filter(item => 
+          !item.name || !item.quantity || typeof item.price !== 'number' || item.price <= 0
+        );
+
+        if (invalidItems.length > 0) {
+          throw new Error('Algunos paquetes no tienen peso o tarifa válida');
+        }
+
+        // Calcular el total
+        const total_amount = invoice_items.reduce(
+          (sum, item) => sum + (item.quantity * item.price),
+          0
+        );
+
+        // Preparar los datos de la factura
+        const invoiceData = {
+          invoice_number,
+          customer_id: clientId,
+          issue_date: new Date().toISOString(),
+          due_date: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(), // 30 días
+          status: "PENDIENTE",
+          total_amount: parseFloat(total_amount.toFixed(2)),
+          invoice_items
+        };
+
+        console.log('📝 Enviando datos de factura:', invoiceData);
+
+        // Enviar la petición para crear la factura
+        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/invoices`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json'
+          },
+          credentials: 'include',
+          body: JSON.stringify(invoiceData)
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.message || 'Error al crear la factura');
+        }
+      }
+
+      customToast.success({
+        title: "Facturación Exitosa",
+        description: "Los paquetes han sido facturados correctamente"
+      });
+      setPackagesToInvoice([]);
+      setIsInvoiceDialogOpen(false);
+      
+      // Recargar la información del paquete actual si existe
+      if (packageInfo?.tracking) {
+        const updatedPackage = await packagesService.findByTracking(packageInfo.tracking);
+        if (updatedPackage) {
+          setPackageInfo(prev => ({
+            ...prev!,
+            status: updatedPackage.packageStatus,
+            statusName: updatedPackage.shippingStages[0]?.status || 'PENDIENTE'
+          }));
+        }
+      }
+    } catch (error) {
+      console.error('Error al facturar:', error);
+      customToast.error({
+        title: "Error",
+        description: error instanceof Error ? error.message : "No se pudieron facturar los paquetes"
+      });
+    }
+  };
+
+  return (
+    <>
+      <Dialog open={isSearchOpen} onOpenChange={setIsSearchOpen}>
+        <DialogContent className="sm:max-w-[600px]">
+          <DialogHeader>
+            <DialogTitle>Buscar Cliente</DialogTitle>
+            <DialogDescription>
+              Busque y seleccione un cliente para asignar al paquete
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="flex flex-col gap-4">
+            <div className="flex items-center justify-between">
+              <Label htmlFor="filter-active" className="text-sm text-muted-foreground">
+                Mostrar solo clientes activos
+              </Label>
+              <Button
+                variant="ghost"
+                size="icon"
+                className={showOnlyActive ? "text-primary" : "text-muted-foreground"}
+                onClick={() => setShowOnlyActive(!showOnlyActive)}
+              >
+                {showOnlyActive ? <Check className="h-4 w-4" /> : <X className="h-4 w-4" />}
+              </Button>
+            </div>
+            
+            <Command className="rounded-lg border shadow-md">
+              <CommandInput
+                placeholder="Buscar por nombre, email o sucursal..." 
+                value={searchQuery}
+                onValueChange={handleSearch}
+                className="h-9"
+              />
+              
+              <CommandEmpty className="py-6 text-center text-sm">
+                {isSearching ? (
+                  <div className="flex flex-col items-center justify-center space-y-2">
+                    <Spinner size="md" />
+                    <p>Buscando clientes...</p>
+                  </div>
+                ) : (
+                  <p>No se encontraron clientes</p>
+                )}
+              </CommandEmpty>
+              
+              <ScrollArea className="max-h-[300px] overflow-auto">
+                {filteredClients.length > 0 && (
+                  <CommandGroup>
+                    {filteredClients.map((client) => (
+                      <CommandItem
+                        key={client.id}
+                        className="flex items-center gap-2 py-2"
+                        onSelect={() => handleSelectClient(client)}
+                      >
+                        <Avatar className="h-8 w-8">
+                          <AvatarFallback className="text-xs bg-primary text-primary-foreground">
+                            {client.firstName?.[0]}{client.lastName?.[0]}
+                          </AvatarFallback>
+                        </Avatar>
+                        <div className="flex flex-col">
+                          <span className="font-medium">
+                            {client.firstName} {client.lastName}
+                          </span>
+                          <span className="text-sm text-muted-foreground">
+                            {client.email}
+                          </span>
+                          {client.branchReference?.id && (
+                            <span className="text-xs text-muted-foreground">
+                              Sucursal: {client.branchReference.id}
+                            </span>
+                          )}
+                        </div>
+                        {client.accountStatus !== undefined && (
+                          <Badge 
+                            variant={client.accountStatus ? 'success' : 'secondary'}
+                            className="ml-auto"
+                          >
+                            {client.accountStatus ? 'Activo' : 'Inactivo'}
+                          </Badge>
+                        )}
+                      </CommandItem>
+                    ))}
+                  </CommandGroup>
+                )}
+              </ScrollArea>
+            </Command>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Diálogo de Facturación */}
+      <Dialog open={isInvoiceDialogOpen} onOpenChange={setIsInvoiceDialogOpen}>
+        <DialogContent className="sm:max-w-[800px] max-h-[90vh] overflow-hidden flex flex-col bg-gradient-to-br from-background to-background/50 backdrop-blur-md border-primary/20">
+          <DialogHeader className="border-b pb-4 border-primary/10">
+            <div className="flex items-center justify-between">
+              <div>
+                <DialogTitle className="text-2xl font-bold bg-gradient-to-r from-primary via-purple-600 to-blue-600 bg-clip-text text-transparent">
+                  Lista de Paquetes a Facturar
+                </DialogTitle>
+                <DialogDescription className="mt-1 text-muted-foreground">
+                  {packagesToInvoice.length} paquetes listos para facturar
+                </DialogDescription>
+              </div>
+              <div className="flex items-center gap-2">
+                <Badge variant="outline" className="bg-primary/5 px-4 py-1.5 rounded-full border-primary/20 shadow-sm">
+                  <DollarSign className="w-4 h-4 mr-1.5 text-primary/80" />
+                  <span className="font-medium">Total: ${packagesToInvoice.reduce((acc, pkg) => {
+                    const weight = pkg.total_weight || 0;
+                    const rate = pkg.client?.planRate || 0;
+                    return acc + (weight * rate);
+                  }, 0).toFixed(2)}</span>
+                </Badge>
+              </div>
+            </div>
+          </DialogHeader>
+          
+          <div className="flex-1 overflow-hidden">
+            {packagesToInvoice.length === 0 ? (
+              <div className="flex flex-col items-center justify-center h-full p-8 text-center">
+                <div className="relative w-32 h-32 mb-6">
+                  <div className="absolute inset-0 bg-gradient-to-r from-primary/20 to-purple-500/20 rounded-full blur-2xl animate-pulse" />
+                  <div className="relative bg-background/80 backdrop-blur-sm rounded-full p-8 border border-primary/10 shadow-xl">
+                    <Package className="w-16 h-16 text-primary/60" />
+                  </div>
+                </div>
+                <h3 className="text-xl font-semibold mb-3 bg-gradient-to-r from-primary to-purple-600 bg-clip-text text-transparent">Sin Paquetes</h3>
+                <p className="text-sm text-muted-foreground max-w-sm">
+                  No hay paquetes en la lista de facturación. Agregue paquetes usando el botón "Agregar a Facturación".
+                </p>
+              </div>
+            ) : (
+              <ScrollArea className="flex-1 h-[calc(100vh-300px)] px-1">
+                <div className="space-y-6 py-4">
+                  {Object.entries(
+                    packagesToInvoice.reduce((acc, pkg) => {
+                      const clientId = pkg.client?.id || 'unassigned';
+                      if (!acc[clientId]) {
+                        acc[clientId] = {
+                          client: pkg.client,
+                          packages: []
+                        };
+                      }
+                      acc[clientId].packages.push(pkg);
+                      return acc;
+                    }, {} as Record<string, { client: any; packages: typeof packagesToInvoice }>)
+                  ).map(([clientId, group]) => (
+                    <div key={clientId} className="bg-card/30 backdrop-blur-sm rounded-xl border border-primary/10 overflow-hidden">
+                      <div className="p-4 bg-primary/5">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-primary/20 to-purple-500/20 flex items-center justify-center">
+                              <span className="text-lg font-semibold text-primary">
+                                {group.client?.name?.[0]?.toUpperCase() || '?'}
+                              </span>
+                            </div>
+                            <div>
+                              <h3 className="font-medium text-foreground">
+                                {group.client?.name || 'Cliente no asignado'}
+                              </h3>
+                              <p className="text-sm text-muted-foreground">
+                                {group.client?.email || 'Email no disponible'}
+                              </p>
+                            </div>
+                          </div>
+                          <Badge variant="outline" className="bg-primary/5 px-3 py-1 rounded-full">
+                            <Scale className="w-3.5 h-3.5 mr-1.5 text-primary/80" />
+                            <span className="font-medium">${group.client?.planRate || 0}/lb</span>
+                          </Badge>
+                        </div>
+                      </div>
+                      
+                      <div className="divide-y divide-primary/5">
+                        {group.packages.map((pkg) => {
+                          const weight = pkg.total_weight || 0;
+                          const rate = group.client?.planRate || 0;
+                          const price = weight * rate;
+                          
+                          return (
+                            <div key={pkg.tracking} className="p-4 hover:bg-primary/5 transition-colors">
+                              <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-4">
+                                  <div className="w-12 h-12 rounded-lg bg-background flex items-center justify-center border border-primary/10">
+                                    <Package className="w-6 h-6 text-primary/60" />
+                                  </div>
+                                  <div>
+                                    <div className="flex items-center gap-2 mb-1">
+                                      <h4 className="font-medium text-sm">{pkg.tracking}</h4>
+                                      <Badge variant="outline" className="bg-green-500/10 text-green-600 border-green-200/20">
+                                        {pkg.status}
+                                      </Badge>
+                                    </div>
+                                    <div className="flex items-center gap-3 text-sm text-muted-foreground">
+                                      <div className="flex items-center gap-1.5">
+                                        <Scale className="w-3.5 h-3.5" />
+                                        <span>{weight} lb</span>
+                                      </div>
+                                      <div className="flex items-center gap-1.5">
+                                        <MapPin className="w-3.5 h-3.5" />
+                                        <span>{pkg.shipping?.mode || 'No especificado'}</span>
+                                      </div>
+                                    </div>
+                                  </div>
+                                </div>
+                                <div className="flex items-center gap-3">
+                                  <Badge variant="outline" className="bg-background px-3 py-1">
+                                    <DollarSign className="w-3.5 h-3.5 mr-1 text-primary/80" />
+                                    <span className="font-medium">${price.toFixed(2)}</span>
+                                  </Badge>
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                                    onClick={() => handleRemoveFromInvoice(pkg.tracking)}
+                                  >
+                                    <Trash2 className="w-4 h-4" />
+                                  </Button>
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </ScrollArea>
+            )}
+          </div>
+
+          <div className="border-t pt-4 mt-auto border-primary/10">
+            <div className="flex justify-between items-center">
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <Info className="w-4 h-4" />
+                <span>Precio calculado según peso real y tarifa del plan</span>
+              </div>
+              <div className="flex gap-3">
+                <Button
+                  variant="outline"
+                  onClick={() => setIsInvoiceDialogOpen(false)}
+                  className="border-primary/20 hover:bg-primary/5"
+                >
+                  Cancelar
+                </Button>
+                <Button
+                  onClick={handleCreateInvoice}
+                  className="bg-gradient-to-r from-primary to-purple-600 hover:from-primary/90 hover:to-purple-600/90 text-white shadow-lg shadow-primary/20"
+                  disabled={packagesToInvoice.length === 0}
+                >
+                  <Receipt className="w-4 h-4 mr-2" />
+                  Facturar
+                </Button>
+              </div>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <div className="min-h-screen bg-gradient-to-b from-background to-background/80">
+        <div className="container mx-auto px-4 py-8">
+          {/* Header */}
+          <div className="text-center mb-12">
+            <motion.h1 
+              className="text-4xl md:text-5xl lg:text-6xl font-bold bg-gradient-to-r from-primary to-purple-600 bg-clip-text text-transparent mb-4"
+              initial={{ opacity: 0, y: -20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5 }}
+            >
+              Sistema de Tracking
+            </motion.h1>
+            <motion.p 
+              className="text-lg text-muted-foreground max-w-2xl mx-auto"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 0.2 }}
+            >
+              Rastrea y gestiona tus paquetes en tiempo real con nuestro sistema avanzado de seguimiento
+            </motion.p>
+          </div>
+
+          {/* Buscador */}
+          <motion.div 
+            className="max-w-3xl mx-auto mb-12"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.4 }}
+          >
+            <div className="relative group">
+              <div className="absolute inset-0 bg-gradient-to-r from-primary/20 via-purple-500/20 to-blue-500/20 rounded-2xl blur-xl opacity-0 group-hover:opacity-70 transition-all duration-500" />
+              <div className="relative bg-card backdrop-blur-sm rounded-2xl shadow-2xl border border-primary/10 p-3">
+                <div className="flex items-center gap-3">
+                  <div className="relative flex-1">
+                    <div className="absolute inset-y-0 left-4 flex items-center pointer-events-none text-muted-foreground/60">
+                      <Search className="w-5 h-5" />
+            </div>
+            <Input
+              placeholder="Ingrese número de tracking..."
+              value={trackingNumber}
+              onChange={(e) => setTrackingNumber(e.target.value)}
+              onKeyPress={(e) => e.key === 'Enter' && handleScan(e.target.value)}
+                      className="w-full pl-12 h-14 text-lg bg-background/50 border-none focus:ring-2 focus:ring-primary/20 transition-all duration-300"
+            />
+                  </div>
+            <Button 
+              onClick={() => handleScan(trackingNumber)}
+              disabled={!trackingNumber.trim() || loading}
+              className="h-14 px-8 bg-primary hover:bg-primary/90 text-white rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-[1.02] active:scale-[0.98]"
+            >
+                {loading ? (
+                  <div className="flex items-center space-x-2">
+                    <Loader2 className="animate-spin mr-2" size={18} />
+                    <span>Buscando...</span>
+                  </div>
+                ) : (
+                  <>Buscar</>
+                )}
+            </Button>
+                </div>
+              </div>
+          </div>
+        </motion.div>
+
+          {/* Información del Paquete */}
+          <AnimatePresence mode="wait">
+            {packageInfo && (
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
+                className="max-w-5xl mx-auto"
+              >
+                <Tabs defaultValue="package" className="w-full">
+                  <TabsList className="w-full grid grid-cols-3 gap-4 p-1 h-auto bg-muted/50 backdrop-blur-sm rounded-2xl mb-6">
+                    <TabsTrigger 
+                      value="package"
+                      className="data-[state=active]:bg-background data-[state=active]:text-primary data-[state=active]:shadow-lg transition-all duration-300 py-3 rounded-xl"
+                    >
+                      <Package className="w-5 h-5 mr-2" />
+                      Información del Paquete
+                    </TabsTrigger>
+                    <TabsTrigger 
+                      value="tracking"
+                      className="data-[state=active]:bg-background data-[state=active]:text-primary data-[state=active]:shadow-lg transition-all duration-300 py-3 rounded-xl"
+                    >
+                      <History className="w-5 h-5 mr-2" />
+                      Historial de Tracking
+                </TabsTrigger>
+                    <TabsTrigger 
+                      value="client"
+                      className="data-[state=active]:bg-background data-[state=active]:text-primary data-[state=active]:shadow-lg transition-all duration-300 py-3 rounded-xl"
+                    >
+                      <User className="w-5 h-5 mr-2" />
+                      Cliente
+                </TabsTrigger>
+              </TabsList>
+
+                  <TabsContent value="package">
+                    <Card className="border-none shadow-2xl bg-card/50 backdrop-blur-sm">
+                      <CardHeader className="pb-2">
+                        <div className="flex items-center justify-between">
+                        <div>
+                            <CardTitle className="text-2xl font-bold">
+                              Detalles del Paquete
+                            </CardTitle>
+                            <p className="text-sm text-muted-foreground mt-1">
+                              Tracking: {packageInfo.tracking}
+                            </p>
+                        </div>
+                          <Badge 
+                            variant={packageInfo.status === 'delivered' ? 'success' : 'default'}
+                            className="px-4 py-1.5 text-sm font-medium rounded-lg"
+                          >
+                            {packageInfo.statusName}
+                          </Badge>
+                        </div>
+                      </CardHeader>
+                      <CardContent className="grid gap-8">
+                        {/* Peso y Dimensiones */}
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                          <div className="bg-muted/30 rounded-xl p-4 backdrop-blur-sm">
+                            <h3 className="text-sm font-medium text-muted-foreground mb-4">
+                              Información de Peso
+                            </h3>
+                            <div className="grid grid-cols-2 gap-4">
+                              <div className="space-y-2">
+                                <div className="flex items-center gap-2 text-muted-foreground">
+                                  <Weight className="w-4 h-4" />
+                                  <span className="text-sm">Peso Total</span>
+                      </div>
+                                <p className="text-2xl font-bold">
+                                  {packageInfo.total_weight} Lb
+                            </p>
+                          </div>
+                                  <div className="space-y-2">
+                                <div className="flex items-center gap-2 text-muted-foreground">
+                                  <Scale className="w-4 h-4" />
+                                  <span className="text-sm">Peso Volumétrico</span>
+                                  </div>
+                                <p className="text-2xl font-bold">
+                                  {packageInfo.vol_weight} Lb
+                                </p>
+                                  </div>
+                                </div>
+                          </div>
+                          <div className="bg-muted/30 rounded-xl p-4 backdrop-blur-sm">
+                            <h3 className="text-sm font-medium text-muted-foreground mb-4">
+                              Dimensiones
+                            </h3>
+                            <div className="grid grid-cols-3 gap-4">
+                                  <div className="space-y-2">
+                                <span className="text-sm text-muted-foreground">Largo</span>
+                                <p className="text-2xl font-bold">
+                                  {packageInfo.dimensions.length} {packageInfo.dimensions.unit}
+                                </p>
+                                  </div>
+                                  <div className="space-y-2">
+                                <span className="text-sm text-muted-foreground">Ancho</span>
+                                <p className="text-2xl font-bold">
+                                  {packageInfo.dimensions.width} {packageInfo.dimensions.unit}
+                                </p>
+                                  </div>
+                              <div className="space-y-2">
+                                <span className="text-sm text-muted-foreground">Alto</span>
+                                <p className="text-2xl font-bold">
+                                  {packageInfo.dimensions.height} {packageInfo.dimensions.unit}
+                                </p>
+                                </div>
+                        </div>
+                      </div>
+
+                        {/* Detalles de Envío */}
+                        <div className="bg-muted/30 rounded-xl p-4 backdrop-blur-sm">
+                          <h3 className="text-sm font-medium text-muted-foreground mb-4">
+                            Detalles de Envío
+                          </h3>
+                          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                            <div className="space-y-2">
+                              <div className="flex items-center gap-2 text-muted-foreground">
+                                <Plane className="w-4 h-4" />
+                                <span className="text-sm">Modo de Envío</span>
+                        </div>
+                        <p className="text-lg font-semibold">
+                                {packageInfo.shipping.mode}
+                        </p>
+                      </div>
+                            <div className="space-y-2">
+                              <div className="flex items-center gap-2 text-muted-foreground">
+                                <Truck className="w-4 h-4" />
+                                <span className="text-sm">Transportista</span>
+                        </div>
+                        <p className="text-lg font-semibold">
+                                {packageInfo.shipping.carrier}
+                        </p>
+                      </div>
+                            <div className="space-y-2">
+                              <div className="flex items-center gap-2 text-muted-foreground">
+                                <Shield className="w-4 h-4" />
+                                <span className="text-sm">Seguro</span>
+                    </div>
+                              <p className="text-lg font-semibold">
+                                {packageInfo.insurance ? 'Sí' : 'No'}
+                        </p>
+                      </div>
+                      </div>
+                    </div>
+
+                        {/* Fechas */}
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                          <div className="bg-muted/30 rounded-xl p-4 backdrop-blur-sm">
+                            <div className="flex items-center gap-2 text-muted-foreground mb-2">
+                              <Calendar className="w-4 h-4" />
+                              <span className="text-sm">Fecha de Creación</span>
+                          </div>
+                            <p className="text-lg font-semibold">
+                              {new Date(packageInfo.created_at).toLocaleDateString()}
+                            </p>
+                      </div>
+                          <div className="bg-muted/30 rounded-xl p-4 backdrop-blur-sm">
+                            <div className="flex items-center gap-2 text-muted-foreground mb-2">
+                              <Clock className="w-4 h-4" />
+                              <span className="text-sm">Entrega Estimada</span>
+                    </div>
+                            <p className="text-lg font-semibold">
+                              {new Date(packageInfo.shipping.estimated_delivery).toLocaleDateString()}
+                        </p>
+                      </div>
+                    </div>
+
+                        {/* Información del Cliente */}
+                        <div className="bg-muted/30 rounded-xl p-4 backdrop-blur-sm">
+                          <h3 className="text-sm font-medium text-muted-foreground mb-4">
+                            Información del Cliente
+                          </h3>
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-4">
+                              <Avatar className="h-12 w-12">
+                                <AvatarFallback>
+                                  {packageInfo?.client ? packageInfo.client.name.charAt(0).toUpperCase() : 'NA'}
+                                </AvatarFallback>
+                              </Avatar>
+                        <div>
+                                <h4 className="text-lg font-semibold">
+                                  {packageInfo?.client ? packageInfo.client.name : 'Sin asignar'}
+                                </h4>
+                                <p className="text-sm text-muted-foreground">
+                                  {packageInfo?.client ? packageInfo.client.email : 'Pendiente de asignación'}
+                          </p>
+                          {packageInfo?.client?.planRate && (
+                            <Badge variant="outline" className="mt-2 bg-primary/5">
+                              <DollarSign className="w-3 h-3 mr-1" />
+                              Tarifa: ${packageInfo.client.planRate}/lb
+                            </Badge>
+                          )}
+                        </div>
+                      </div>
+                            {!packageInfo?.client && (
+                              <Button 
+                                variant="outline" 
+                                className="bg-primary/5"
+                                onClick={() => setIsSearchOpen(true)}
+                              >
+                                <User className="w-4 h-4 mr-2" />
+                                Asignar Cliente
+                              </Button>
+                            )}
+                    </div>
+                  </div>
+                      </CardContent>
+                </Card>
+              </TabsContent>
+
+                  <TabsContent value="tracking">
+                    <Card className="border-none shadow-2xl bg-card/50 backdrop-blur-sm">
+                      <CardHeader>
+                        <CardTitle className="text-2xl font-bold">Historial de Tracking</CardTitle>
+                        <p className="text-sm text-muted-foreground">
+                          Seguimiento del paquete {packageInfo.tracking}
+                        </p>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="relative">
+                          {/* Línea de tiempo vertical */}
+                          <div className="absolute left-8 top-0 bottom-0 w-0.5 bg-gradient-to-b from-primary via-purple-500 to-muted-foreground/20"></div>
+                          
+                          {/* Estados del tracking */}
+                          <div className="space-y-8">
+                            {/* Miami Warehouse */}
+                            <div className="relative flex items-start gap-6 group">
+                              <div className="absolute left-8 top-0 bottom-0 w-0.5 bg-gradient-to-b from-primary to-purple-500 group-hover:from-primary/80 group-hover:to-purple-500/80 transition-all duration-300" />
+                              <div className="relative flex items-center justify-center w-16 h-16 rounded-full bg-background shadow-lg border border-primary/10">
+                                <Plane className="w-8 h-8 text-primary" />
+                            </div>
+                              <div className="flex-1 bg-muted/30 rounded-xl p-4 backdrop-blur-sm border border-primary/5">
+                                <h4 className="text-lg font-semibold text-foreground">Miami Warehouse</h4>
+                                <p className="text-sm text-muted-foreground mt-1">
+                                  Paquete recibido en almacén de Miami
+                                </p>
+                                <div className="flex items-center gap-2 mt-2">
+                                  <MapPin className="w-4 h-4 text-muted-foreground" />
+                                  <span className="text-sm text-muted-foreground">Miami, FL</span>
+                                  <span className="text-sm text-muted-foreground">•</span>
+                                  <Clock className="w-4 h-4 text-muted-foreground" />
+                                  <span className="text-sm text-muted-foreground">
+                                    {new Date(packageInfo.created_at).toLocaleDateString()}
+                                  </span>
+                                </div>
+                            </div>
+                    </div>
+
+                            {/* En Sucursal */}
+                            <div className="relative flex items-start gap-6 group">
+                              <div className="relative flex items-center justify-center w-16 h-16 rounded-full bg-background shadow-lg border border-primary/10">
+                                <Building2 className="w-8 h-8 text-primary" />
+                                    </div>
+                              <div className="flex-1 bg-muted/30 rounded-xl p-4 backdrop-blur-sm border border-primary/5">
+                                <h4 className="text-lg font-semibold text-foreground">En Sucursal</h4>
+                                <p className="text-sm text-muted-foreground mt-1">
+                                  Paquete disponible en sucursal para facturación
+                                </p>
+                                <div className="flex items-center gap-2 mt-2">
+                                  <MapPin className="w-4 h-4 text-muted-foreground" />
+                                  <span className="text-sm text-muted-foreground">Sucursal Local</span>
+                                  <span className="text-sm text-muted-foreground">•</span>
+                                  <Clock className="w-4 h-4 text-muted-foreground" />
+                                  <span className="text-sm text-muted-foreground">
+                                    {new Date(packageInfo.shipping.estimated_delivery).toLocaleDateString()}
+                                  </span>
+                                      </div>
+                                <div className="mt-3 flex items-center gap-2">
+                                  <Badge variant="outline" className="bg-primary/5">
+                                    <Package className="w-3 h-3 mr-1" />
+                                    Listo para facturar
+                                  </Badge>
+                                      </div>
+                                    </div>
+                                  </div>
+                                </div>
+                              </div>
+                      </CardContent>
+                    </Card>
+                  </TabsContent>
+
+                  <TabsContent value="client">
+                    <Card className="border-none shadow-2xl bg-card/50 backdrop-blur-sm">
+                      <CardHeader>
+                        <CardTitle className="text-2xl font-bold">Gestión de Cliente</CardTitle>
+                        <p className="text-sm text-muted-foreground">
+                          {packageInfo.client ? 'Cliente asignado al paquete' : 'Asigne un cliente al paquete'}
+                        </p>
+                      </CardHeader>
+                      <CardContent>
+                        {packageInfo.client ? (
+                          <div className="space-y-6">
+                            <div className="flex items-center gap-4">
+                              <Avatar className="h-16 w-16">
+                                <AvatarFallback className="text-lg">
+                                  {packageInfo.client.name.charAt(0).toUpperCase()}
+                                </AvatarFallback>
+                              </Avatar>
+                              <div>
+                                <h3 className="text-xl font-semibold">{packageInfo.client.name}</h3>
+                                <p className="text-muted-foreground">{packageInfo.client.email}</p>
+                                  </div>
+                                  </div>
+                            <div className="grid gap-4 p-4 bg-muted/30 rounded-xl backdrop-blur-sm">
+                              <div className="flex items-center gap-2">
+                                <Package className="w-4 h-4 text-muted-foreground" />
+                                <span className="text-sm text-muted-foreground">Tracking:</span>
+                                <span className="font-medium">{packageInfo.tracking}</span>
+                                  </div>
+                              <div className="flex items-center gap-2">
+                                <Calendar className="w-4 h-4 text-muted-foreground" />
+                                <span className="text-sm text-muted-foreground">Fecha de Asignación:</span>
+                                <span className="font-medium">
+                                  {new Date().toLocaleDateString()}
+                                </span>
+                                    </div>
+                                  </div>
+                            <Button variant="outline" className="w-full" onClick={() => setIsSearchOpen(true)}>
+                              <User className="w-4 h-4 mr-2" />
+                              Cambiar Cliente
+                            </Button>
+                                </div>
+                        ) : (
+                          <div className="space-y-6">
+                            <div className="p-8 text-center bg-muted/30 rounded-xl backdrop-blur-sm">
+                              <User className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
+                              <h3 className="text-lg font-semibold mb-2">Sin Cliente Asignado</h3>
+                              <p className="text-sm text-muted-foreground mb-6">
+                                Este paquete no tiene un cliente asignado. Asigne uno para continuar con la facturación.
+                              </p>
+                                <Button
+                                className="w-full sm:w-auto" 
+                                onClick={() => setIsSearchOpen(true)}
+                              >
+                                <User className="w-4 h-4 mr-2" />
+                                Asignar Cliente
+                                </Button>
+                              </div>
+                      </div>
+                    )}
+                      </CardContent>
+                </Card>
+              </TabsContent>
+            </Tabs>
+          </motion.div>
+        )}
+          </AnimatePresence>
+
+          {/* Botones de Facturación */}
+          <AnimatePresence>
+            {packageInfo && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: 20 }}
+                className="max-w-5xl mx-auto mt-8 bg-card/50 backdrop-blur-sm rounded-xl border border-primary/10 p-4 shadow-lg"
+          >
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-4">
+                    {/* Botón de Agregar a Facturación */}
+                    <Button
+                      onClick={handleAddToInvoice}
+                      className="bg-primary hover:bg-primary/90 shadow-md hover:shadow-lg transition-all duration-300"
+                      disabled={!packageInfo.client}
+                    >
+                      <Receipt className="w-4 h-4 mr-2" />
+                      Agregar a Facturación
+                    </Button>
+
+                    {/* Contador de Paquetes */}
+                    {packagesToInvoice.length > 0 && (
+                      <Button
+                        onClick={() => setIsInvoiceDialogOpen(true)}
+                        variant="outline"
+                        className="bg-background/50 backdrop-blur-sm border-primary/10 shadow-md hover:shadow-lg transition-all duration-300"
+                      >
+                        <Package className="w-4 h-4 mr-2" />
+                        Ver Lista ({packagesToInvoice.length})
+                      </Button>
+                    )}
+                        </div>
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <Info className="w-4 h-4" />
+                    <span>Los paquetes agregados aparecerán en la lista de facturación</span>
+                      </div>
+                              </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          {/* Estado del Sistema */}
+          <div className="fixed bottom-8 right-8 z-50">
+            <div className="relative">
+              <div className="absolute inset-0 bg-gradient-to-br from-primary/10 via-purple-500/10 to-blue-500/10 rounded-full blur-xl" />
+              <div className="relative bg-card/80 backdrop-blur-sm rounded-full border border-primary/10 shadow-xl p-4">
+                <div className="flex items-center gap-3">
+                  <div className={`w-2.5 h-2.5 rounded-full ${isConnected ? 'bg-green-500' : 'bg-red-500'} animate-pulse`} />
+                  <span className="text-sm font-medium text-muted-foreground whitespace-nowrap">
+                    {isConnected ? 'Sistema Conectado' : 'Sin Conexión'}
+                  </span>
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                          <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 rounded-full hover:bg-primary/5"
+                          >
+                          <Info className="h-4 w-4 text-muted-foreground" />
+                          </Button>
+                      </TooltipTrigger>
+                      <TooltipContent side="top">
+                        <div className="space-y-2">
+                          <p className="font-medium">Estado del Sistema</p>
+                          <div className="text-sm text-muted-foreground space-y-1">
+                            <p>• Notificaciones: {isConnected ? 'Activas' : 'Desactivadas'}</p>
+                            <p>• Actualizaciones: {isConnected ? 'En tiempo real' : 'Desactivadas'}</p>
+                            <p>• Última conexión: {new Date().toLocaleTimeString()}</p>
+                    </div>
+                </div>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+              </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Animación de Escaneo */}
+          <AnimatePresence>
+            {isScanning && (
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                className="fixed inset-0 z-50 flex items-center justify-center"
+              >
+                <div className="absolute inset-0 bg-background/80 backdrop-blur-md" />
+                <ScanAnimation message={scanMessage} />
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
+      </div>
+    </>
+  );
+};
+
+export default TrackingPage;

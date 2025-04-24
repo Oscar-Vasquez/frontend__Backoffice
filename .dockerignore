@@ -1,0 +1,25 @@
+# Git
+.git
+.gitignore
+
+# Node
+node_modules
+npm-debug.log
+*.log
+
+# Next.js build output
+.next/
+
+# Docker
+Dockerfile
+docker-compose.yml
+.dockerignore
+
+# Env files
+.env*
+!.env.example
+!.env.production
+
+# OS specific
+.DS_Store
+Thumbs.db 

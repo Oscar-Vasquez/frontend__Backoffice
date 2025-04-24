@@ -1,0 +1,30 @@
+version: '3.8'
+
+services:
+  frontend:
+    build:
+      context: . # Directorio donde está el Dockerfile
+      dockerfile: Dockerfile
+      args:
+        # Pasa las variables del archivo .env como argumentos de build
+        # Asegúrate de que coincidan con los ARG del Dockerfile
+        - NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL}
+        - NEXT_PUBLIC_SUPABASE_URL=${NEXT_PUBLIC_SUPABASE_URL}
+        - NEXT_PUBLIC_SUPABASE_ANON_KEY=${NEXT_PUBLIC_SUPABASE_ANON_KEY}
+        - BASE_URL=${BASE_URL}
+        - DASHBOARD_BASE_URL=${DASHBOARD_BASE_URL}
+        # Aquí podrías añadir más variables NEXT_PUBLIC_ del .env si las necesitas para el build
+        # - NEXT_PUBLIC_API_KEY=${NEXT_PUBLIC_API_KEY}
+    container_name: workexpress-frontend # Nombre del contenedor
+    ports:
+      - "3000:3000" # Mapea puerto local 3000 al puerto 3000 del contenedor
+    restart: unless-stopped # Reinicia el contenedor si se detiene inesperadamente
+    env_file:
+      - .env # Carga variables de entorno en runtime desde el archivo .env (si las hubiera, aunque las NEXT_PUBLIC_ ya se usaron en build)
+    networks:
+      - workexpress_net # Opcional: define una red si tienes un backend
+
+# Opcional: Define una red si tienes más servicios (ej. backend)
+networks:
+  workexpress_net:
+    driver: bridge 

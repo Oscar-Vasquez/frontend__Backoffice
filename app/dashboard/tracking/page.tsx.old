@@ -1,0 +1,9 @@
+import TrackingDashboard from './components/TrackingDashboard';
+
+/**
+ * Página principal de tracking
+ * Renderiza el dashboard de tracking
+ */
+export default function TrackingPage() {
+  return <TrackingDashboard />;
+}

@@ -1,0 +1,74 @@
+[
+  {
+    "id": "1",
+    "name": "Shane Nguyen",
+    "email": "shaneng@labourlink.com",
+    "status": "onboarded",
+    "role": "consultant",
+    "dateAdded": "2023-06-07"
+  },
+  {
+    "id": "2",
+    "name": "Arlene McCoy",
+    "email": "arlenemccoy@labourlink.com",
+    "status": "active",
+    "role": "consultant",
+    "dateAdded": "2022-01-24"
+  },
+  {
+    "id": "3",
+    "name": "Guy Hawkins",
+    "email": "guyhawk@labourlink.com",
+    "status": "inactive",
+    "role": "administrator",
+    "dateAdded": "2020-04-18"
+  },
+  {
+    "id": "4",
+    "name": "Dianne Russell",
+    "email": "diannerussell@labourlink.com",
+    "status": "active",
+    "role": "manager",
+    "dateAdded": "2022-02-02"
+  },
+  {
+    "id": "5",
+    "name": "Albert Flores",
+    "email": "albertflores@labourlink.com",
+    "status": "pending",
+    "role": "consultant",
+    "dateAdded": "2022-06-29"
+  },
+  {
+    "id": "6",
+    "name": "Jacob Jones",
+    "email": "jacobjones@labourlink.com",
+    "status": "active",
+    "role": "administrator",
+    "dateAdded": "2021-10-30"
+  },
+  {
+    "id": "7",
+    "name": "Kathryn Murphy",
+    "email": "kathryn@labourlink.com",
+    "status": "active",
+    "role": "manager",
+    "dateAdded": "2022-12-23"
+  },
+  {
+    "id": "8",
+    "name": "Marvin McKinney",
+    "email": "marvin@labourlink.com",
+    "status": "inactive",
+    "role": "consultant",
+    "dateAdded": "2023-05-17"
+  },
+  {
+    "id": "9",
+    "name": "Darlene Robertson",
+    "email": "darlenerobertson@labourlink.com",
+    "status": "active",
+    "role": "consultant",
+    "dateAdded": "2022-08-14"
+  }
+] 
