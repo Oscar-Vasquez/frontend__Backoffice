@@ -188,7 +188,7 @@ export const PackageDetailView = ({
       }
 
       // Verificar si el paquete ya está facturado
-      const verifyResponse = await fetch(`http://localhost:3001/api/v1/invoices/verify-package/${trackingNumber}`, {
+      const verifyResponse = await fetch(`https://backoffice.joshtechs.com/api/v1/invoices/verify-package/${trackingNumber}`, {
         headers: {
           'Authorization': `Bearer ${token}`
         },
@@ -529,7 +529,7 @@ export const PackageDetailView = ({
           // Realizar una llamada de prueba al endpoint de depuración para verificar cómo se están recibiendo los datos
           try {
             console.log('🧪 Enviando datos de prueba al endpoint de depuración...');
-            const debugResponse = await fetch('http://localhost:3001/api/v1/invoices/debug', {
+            const debugResponse = await fetch('https://backoffice.joshtechs.com/api/v1/invoices/debug', {
               method: 'POST',
               headers: {
                 'Accept': 'application/json',
@@ -551,7 +551,7 @@ export const PackageDetailView = ({
           }
           
           // Realizar la petición al backend con configuración explícita para JSON
-          const response = await fetch('http://localhost:3001/api/v1/invoices', {
+          const response = await fetch('https://backoffice.joshtechs.com/api/v1/invoices', {
             method: 'POST',
             headers: {
               'Accept': 'application/json',

@@ -1025,7 +1025,7 @@ const TrackingSearch: React.FC = () => {
         throw new Error('No se encontró el token de autenticación');
       }
 
-      const verifyResponse = await fetch(`http://localhost:3001/api/v1/invoices/verify-package/${targetPackage.trackingNumber}`, {
+      const verifyResponse = await fetch(`https://backoffice.joshtechs.com/api/v1/invoices/verify-package/${targetPackage.trackingNumber}`, {
         headers: {
           'Authorization': `Bearer ${token}`
         },
@@ -1241,7 +1241,7 @@ const TrackingSearch: React.FC = () => {
           try {
             console.log('🔄 Enviando solicitud para crear factura...');
 
-            const response = await fetch('http://localhost:3001/api/v1/invoices', {
+            const response = await fetch('https://backoffice.joshtechs.com/api/v1/invoices', {
               method: 'POST',
               headers: {
                 'Content-Type': 'application/json',
