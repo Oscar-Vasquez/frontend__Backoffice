@@ -42,6 +42,28 @@ import { Pagination } from "@/components/ui/pagination";
 import { InvoiceDetailDialog } from "./invoice-detail-dialog";
 import { ColumnDef } from "@tanstack/react-table";
 
+// --- BEGIN INLINED FUNCTION ---
+function formatInvoiceDate(date: string | Date): string {
+  if (!date) return '';
+  try {
+    const d = new Date(date);
+    // Check if the date is valid
+    if (isNaN(d.getTime())) {
+      console.warn('Invalid date passed to formatInvoiceDate:', date);
+      return 'Fecha inválida';
+    }
+    return d.toLocaleDateString('es-ES', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
+    });
+  } catch (error) {
+    console.error('Error formatting date:', date, error);
+    return 'Error fecha';
+  }
+}
+// --- END INLINED FUNCTION ---
+
 interface InvoicesTableProps {
   data: Invoice[];
   onUpdateStatus: (invoiceId: string, newStatus: string) => void;
@@ -238,9 +260,9 @@ export function InvoicesTable({ data, onUpdateStatus }: InvoicesTableProps) {
   return (
     <div className="w-full space-y-8">
       {/* Panel de Estadísticas */}
-      <div className="relative bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+      <div className="relative bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-gray-100 dark:border-slate-800 overflow-hidden">
         {/* Fondo decorativo */}
-        <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-transparent" />
+        <div className="absolute inset-0 bg-gradient-to-br from-primary/5 dark:from-primary/10 to-transparent" />
         
         {/* Contenido principal */}
         <div className="relative p-6">
@@ -249,30 +271,30 @@ export function InvoicesTable({ data, onUpdateStatus }: InvoicesTableProps) {
             <div className="relative">
               <div className="flex items-start justify-between">
                 <div>
-                  <h3 className="text-base font-medium text-gray-500 flex items-center gap-2">
+                  <h3 className="text-base font-medium text-gray-500 dark:text-gray-400 flex items-center gap-2">
                     <Clock className="w-5 h-5 text-yellow-500" />
                     Facturas Pendientes
                   </h3>
                   <div className="mt-3">
-                    <p className="text-4xl font-bold text-gray-900">
+                    <p className="text-4xl font-bold text-gray-900 dark:text-gray-100">
                       {formatCurrency(filteredData
                         .filter(i => i.status === "PENDIENTE")
                         .reduce((acc, curr) => acc + (parseFloat(curr.total_amount || '0') || curr.totalAmount || 0), 0)
                       )}
                     </p>
                     <div className="flex items-center gap-2 mt-2">
-                      <span className="text-sm text-gray-500">
+                      <span className="text-sm text-gray-500 dark:text-gray-400">
                         {filteredData.filter(i => i.status === "PENDIENTE").length} facturas
                       </span>
                       <div className="h-1.5 w-1.5 rounded-full bg-yellow-500" />
-                      <span className="text-sm font-medium text-yellow-600">Pendiente</span>
+                      <span className="text-sm font-medium text-yellow-600 dark:text-yellow-400">Pendiente</span>
                     </div>
                   </div>
                 </div>
                 <motion.div
                   initial={{ scale: 0 }}
                   animate={{ scale: 1 }}
-                  className="flex items-center justify-center w-12 h-12 rounded-xl bg-yellow-50 text-yellow-500"
+                  className="flex items-center justify-center w-12 h-12 rounded-xl bg-yellow-50 dark:bg-yellow-500/10 text-yellow-500 dark:text-yellow-400"
                 >
                   <span className="text-2xl font-bold">
                     {filteredData.filter(i => i.status === "PENDIENTE").length}
@@ -285,30 +307,30 @@ export function InvoicesTable({ data, onUpdateStatus }: InvoicesTableProps) {
             <div className="relative">
               <div className="flex items-start justify-between">
                 <div>
-                  <h3 className="text-base font-medium text-gray-500 flex items-center gap-2">
+                  <h3 className="text-base font-medium text-gray-500 dark:text-gray-400 flex items-center gap-2">
                     <AlertCircle className="w-5 h-5 text-red-500" />
                     Facturas Atrasadas
                   </h3>
                   <div className="mt-3">
-                    <p className="text-4xl font-bold text-gray-900">
+                    <p className="text-4xl font-bold text-gray-900 dark:text-gray-100">
                       {formatCurrency(filteredData
                         .filter(i => i.status === "ATRASADO")
                         .reduce((acc, curr) => acc + (parseFloat(curr.total_amount || '0') || curr.totalAmount || 0), 0)
                       )}
                     </p>
                     <div className="flex items-center gap-2 mt-2">
-                      <span className="text-sm text-gray-500">
+                      <span className="text-sm text-gray-500 dark:text-gray-400">
                         {filteredData.filter(i => i.status === "ATRASADO").length} facturas
                       </span>
                       <div className="h-1.5 w-1.5 rounded-full bg-red-500" />
-                      <span className="text-sm font-medium text-red-600">Atrasado</span>
+                      <span className="text-sm font-medium text-red-600 dark:text-red-400">Atrasado</span>
                     </div>
                   </div>
                 </div>
                 <motion.div
                   initial={{ scale: 0 }}
                   animate={{ scale: 1 }}
-                  className="flex items-center justify-center w-12 h-12 rounded-xl bg-red-50 text-red-500"
+                  className="flex items-center justify-center w-12 h-12 rounded-xl bg-red-50 dark:bg-red-500/10 text-red-500 dark:text-red-400"
                 >
                   <span className="text-2xl font-bold">
                     {filteredData.filter(i => i.status === "ATRASADO").length}
@@ -321,30 +343,30 @@ export function InvoicesTable({ data, onUpdateStatus }: InvoicesTableProps) {
             <div className="relative">
               <div className="flex items-start justify-between">
                 <div>
-                  <h3 className="text-base font-medium text-gray-500 flex items-center gap-2">
+                  <h3 className="text-base font-medium text-gray-500 dark:text-gray-400 flex items-center gap-2">
                     <Check className="w-5 h-5 text-green-500" />
                     Total Pagado
                   </h3>
                   <div className="mt-3">
-                    <p className="text-4xl font-bold text-gray-900">
+                    <p className="text-4xl font-bold text-gray-900 dark:text-gray-100">
                       {formatCurrency(filteredData
                         .filter(i => i.status === "PAGADO")
                         .reduce((acc, curr) => acc + (parseFloat(curr.total_amount || '0') || curr.totalAmount || 0), 0)
                       )}
                     </p>
                     <div className="flex items-center gap-2 mt-2">
-                      <span className="text-sm text-gray-500">
+                      <span className="text-sm text-gray-500 dark:text-gray-400">
                         {filteredData.filter(i => i.status === "PAGADO").length} facturas
                       </span>
                       <div className="h-1.5 w-1.5 rounded-full bg-green-500" />
-                      <span className="text-sm font-medium text-green-600">Pagado</span>
+                      <span className="text-sm font-medium text-green-600 dark:text-green-400">Pagado</span>
                     </div>
                   </div>
                 </div>
                 <motion.div
                   initial={{ scale: 0 }}
                   animate={{ scale: 1 }}
-                  className="flex items-center justify-center w-12 h-12 rounded-xl bg-green-50 text-green-500"
+                  className="flex items-center justify-center w-12 h-12 rounded-xl bg-green-50 dark:bg-green-500/10 text-green-500 dark:text-green-400"
                 >
                   <span className="text-2xl font-bold">
                     {filteredData.filter(i => i.status === "PAGADO").length}
@@ -356,22 +378,22 @@ export function InvoicesTable({ data, onUpdateStatus }: InvoicesTableProps) {
 
           {/* Barra de progreso general */}
           <div className="mt-8">
-            <div className="flex items-center justify-between text-sm text-gray-500 mb-2">
+            <div className="flex items-center justify-between text-sm text-gray-500 dark:text-gray-400 mb-2">
               <span>Progreso de Pagos</span>
-              <span>{((filteredData.filter(i => i.status === "PAGADO").length / filteredData.length) * 100).toFixed(1)}%</span>
+              <span>{((filteredData.filter(i => i.status === "PAGADO").length / filteredData.length) * 100 || 0).toFixed(1)}%</span>
             </div>
-            <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
+            <div className="h-2 bg-gray-100 dark:bg-slate-700 rounded-full overflow-hidden">
               <motion.div
                 initial={{ width: 0 }}
                 animate={{ 
-                  width: `${(filteredData.filter(i => i.status === "PAGADO").length / filteredData.length) * 100}%` 
+                  width: `${(filteredData.filter(i => i.status === "PAGADO").length / filteredData.length) * 100 || 0}%` 
                 }}
                 transition={{ duration: 1 }}
                 className="h-full bg-gradient-to-r from-green-500 to-green-600"
               />
             </div>
-            <div className="flex justify-between items-center mt-4 text-xs text-gray-500">
-              <div className="flex items-center gap-4">
+            <div className="flex justify-between items-center mt-4 text-xs text-gray-500 dark:text-gray-400">
+              <div className="flex items-center gap-4 flex-wrap">
                 <div className="flex items-center gap-1">
                   <div className="w-3 h-3 rounded-full bg-green-500" />
                   <span>Pagadas ({filteredData.filter(i => i.status === "PAGADO").length})</span>
@@ -391,7 +413,7 @@ export function InvoicesTable({ data, onUpdateStatus }: InvoicesTableProps) {
               </div>
               <div className="flex items-center gap-2">
                 <span>Total:</span>
-                <span className="font-medium text-gray-900">{filteredData.length} facturas</span>
+                <span className="font-medium text-gray-900 dark:text-gray-100">{filteredData.length} facturas</span>
               </div>
             </div>
           </div>
@@ -399,26 +421,26 @@ export function InvoicesTable({ data, onUpdateStatus }: InvoicesTableProps) {
       </div>
 
       {/* Filtros */}
-      <div className="bg-white p-4 rounded-lg border border-gray-100 space-y-4">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center space-x-2 flex-1">
-            <div className="relative flex-1 max-w-md">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+      <div className="bg-white dark:bg-slate-900 p-4 rounded-lg border border-gray-100 dark:border-slate-800 space-y-4">
+        <div className="flex items-center justify-between flex-wrap gap-2">
+          <div className="flex items-center space-x-2 flex-1 min-w-[300px]">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 dark:text-gray-500 h-4 w-4" />
               <Input
                 placeholder="Buscar por número de factura o cliente..."
                 value={filters.search}
                 onChange={(e) => setFilters(prev => ({ ...prev, search: e.target.value }))}
-                className="pl-9"
+                className="pl-9 bg-white dark:bg-slate-800 border-gray-200 dark:border-slate-700 focus:border-primary dark:focus:border-primary"
               />
             </div>
             <Select
               value={filters.status}
               onValueChange={(value) => setFilters(prev => ({ ...prev, status: value }))}
             >
-              <SelectTrigger className="w-[180px]">
+              <SelectTrigger className="w-[180px] bg-white dark:bg-slate-800 border-gray-200 dark:border-slate-700">
                 <SelectValue placeholder="Estado" />
               </SelectTrigger>
-              <SelectContent>
+              <SelectContent className="bg-white dark:bg-slate-800 border-gray-200 dark:border-slate-700">
                 <SelectItem value="TODOS">Todos</SelectItem>
                 <SelectItem value="PENDIENTE">Pendiente</SelectItem>
                 <SelectItem value="PAGADO">Pagado</SelectItem>
@@ -430,23 +452,23 @@ export function InvoicesTable({ data, onUpdateStatus }: InvoicesTableProps) {
           <div className="flex items-center space-x-2">
             <Popover>
               <PopoverTrigger asChild>
-                <Button variant="outline" className="flex items-center gap-2">
+                <Button variant="outline" className="flex items-center gap-2 dark:border-slate-700 dark:text-gray-300 dark:hover:bg-slate-800">
                   <Filter className="h-4 w-4" />
                   Filtros Avanzados
                 </Button>
               </PopoverTrigger>
-              <PopoverContent className="w-80">
+              <PopoverContent className="w-80 bg-white dark:bg-slate-900 border-gray-200 dark:border-slate-700">
                 <div className="space-y-4">
                   <div className="space-y-2">
-                    <h4 className="font-medium">Rango de Fechas</h4>
+                    <h4 className="font-medium dark:text-gray-200">Rango de Fechas</h4>
                     <div className="grid grid-cols-2 gap-2">
                       <div>
-                        <label className="text-sm text-gray-500">Desde</label>
+                        <label className="text-sm text-gray-500 dark:text-gray-400">Desde</label>
                         <Popover>
                           <PopoverTrigger asChild>
                             <Button
                               variant="outline"
-                              className="w-full justify-start text-left font-normal"
+                              className="w-full justify-start text-left font-normal dark:bg-slate-800 dark:border-slate-700 dark:text-gray-300 dark:hover:bg-slate-700"
                             >
                               {filters.dateFrom ? (
                                 format(filters.dateFrom, "P", { locale: es })
@@ -461,17 +483,18 @@ export function InvoicesTable({ data, onUpdateStatus }: InvoicesTableProps) {
                               selected={filters.dateFrom}
                               onSelect={(date) => setFilters(prev => ({ ...prev, dateFrom: date || undefined }))}
                               initialFocus
+                              // Assuming CalendarComponent handles dark mode internally or via props
                             />
                           </PopoverContent>
                         </Popover>
                       </div>
                       <div>
-                        <label className="text-sm text-gray-500">Hasta</label>
+                        <label className="text-sm text-gray-500 dark:text-gray-400">Hasta</label>
                         <Popover>
                           <PopoverTrigger asChild>
                             <Button
                               variant="outline"
-                              className="w-full justify-start text-left font-normal"
+                              className="w-full justify-start text-left font-normal dark:bg-slate-800 dark:border-slate-700 dark:text-gray-300 dark:hover:bg-slate-700"
                             >
                               {filters.dateTo ? (
                                 format(filters.dateTo, "P", { locale: es })
@@ -486,6 +509,7 @@ export function InvoicesTable({ data, onUpdateStatus }: InvoicesTableProps) {
                               selected={filters.dateTo}
                               onSelect={(date) => setFilters(prev => ({ ...prev, dateTo: date || undefined }))}
                               initialFocus
+                              // Assuming CalendarComponent handles dark mode internally or via props
                             />
                           </PopoverContent>
                         </Popover>
@@ -493,30 +517,32 @@ export function InvoicesTable({ data, onUpdateStatus }: InvoicesTableProps) {
                     </div>
                   </div>
                   <div className="space-y-2">
-                    <h4 className="font-medium">Rango de Montos</h4>
+                    <h4 className="font-medium dark:text-gray-200">Rango de Montos</h4>
                     <div className="grid grid-cols-2 gap-2">
                       <div>
-                        <label className="text-sm text-gray-500">Mínimo</label>
+                        <label className="text-sm text-gray-500 dark:text-gray-400">Mínimo</label>
                         <Input
                           type="number"
                           placeholder="0.00"
                           value={filters.amountMin}
                           onChange={(e) => setFilters(prev => ({ ...prev, amountMin: e.target.value }))}
+                          className="dark:bg-slate-800 dark:border-slate-700"
                         />
                       </div>
                       <div>
-                        <label className="text-sm text-gray-500">Máximo</label>
+                        <label className="text-sm text-gray-500 dark:text-gray-400">Máximo</label>
                         <Input
                           type="number"
                           placeholder="0.00"
                           value={filters.amountMax}
                           onChange={(e) => setFilters(prev => ({ ...prev, amountMax: e.target.value }))}
+                          className="dark:bg-slate-800 dark:border-slate-700"
                         />
                       </div>
                     </div>
                   </div>
                   <Button
-                    className="w-full"
+                    className="w-full dark:border-slate-700 dark:text-gray-300 dark:hover:bg-slate-800"
                     variant="outline"
                     onClick={() => setFilters({
                       search: "",
@@ -534,15 +560,16 @@ export function InvoicesTable({ data, onUpdateStatus }: InvoicesTableProps) {
             </Popover>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="outline" className="flex items-center gap-2">
+                <Button variant="outline" className="flex items-center gap-2 dark:border-slate-700 dark:text-gray-300 dark:hover:bg-slate-800">
                   <ChevronDown className="h-4 w-4" />
                   Columnas
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuLabel>Columnas Visibles</DropdownMenuLabel>
-                <DropdownMenuSeparator />
+              <DropdownMenuContent align="end" className="bg-white dark:bg-slate-900 border-gray-200 dark:border-slate-700">
+                <DropdownMenuLabel className="dark:text-gray-300">Columnas Visibles</DropdownMenuLabel>
+                <DropdownMenuSeparator className="dark:bg-slate-700" />
                 <DropdownMenuCheckboxItem
+                  className="dark:text-gray-300 dark:focus:bg-slate-800"
                   checked={visibleColumns.invoice_number}
                   onCheckedChange={(checked) =>
                     setVisibleColumns(prev => ({ ...prev, invoice_number: checked }))
@@ -551,6 +578,7 @@ export function InvoicesTable({ data, onUpdateStatus }: InvoicesTableProps) {
                   Nº Factura
                 </DropdownMenuCheckboxItem>
                 <DropdownMenuCheckboxItem
+                  className="dark:text-gray-300 dark:focus:bg-slate-800"
                   checked={visibleColumns.client}
                   onCheckedChange={(checked) =>
                     setVisibleColumns(prev => ({ ...prev, client: checked }))
@@ -559,6 +587,7 @@ export function InvoicesTable({ data, onUpdateStatus }: InvoicesTableProps) {
                   Cliente
                 </DropdownMenuCheckboxItem>
                 <DropdownMenuCheckboxItem
+                  className="dark:text-gray-300 dark:focus:bg-slate-800"
                   checked={visibleColumns.issue_date}
                   onCheckedChange={(checked) =>
                     setVisibleColumns(prev => ({ ...prev, issue_date: checked }))
@@ -567,6 +596,7 @@ export function InvoicesTable({ data, onUpdateStatus }: InvoicesTableProps) {
                   Fecha de Emisión
                 </DropdownMenuCheckboxItem>
                 <DropdownMenuCheckboxItem
+                  className="dark:text-gray-300 dark:focus:bg-slate-800"
                   checked={visibleColumns.due_date}
                   onCheckedChange={(checked) =>
                     setVisibleColumns(prev => ({ ...prev, due_date: checked }))
@@ -575,6 +605,7 @@ export function InvoicesTable({ data, onUpdateStatus }: InvoicesTableProps) {
                   Fecha de Vencimiento
                 </DropdownMenuCheckboxItem>
                 <DropdownMenuCheckboxItem
+                  className="dark:text-gray-300 dark:focus:bg-slate-800"
                   checked={visibleColumns.total}
                   onCheckedChange={(checked) =>
                     setVisibleColumns(prev => ({ ...prev, total: checked }))
@@ -583,6 +614,7 @@ export function InvoicesTable({ data, onUpdateStatus }: InvoicesTableProps) {
                   Total
                 </DropdownMenuCheckboxItem>
                 <DropdownMenuCheckboxItem
+                  className="dark:text-gray-300 dark:focus:bg-slate-800"
                   checked={visibleColumns.status}
                   onCheckedChange={(checked) =>
                     setVisibleColumns(prev => ({ ...prev, status: checked }))
@@ -597,10 +629,10 @@ export function InvoicesTable({ data, onUpdateStatus }: InvoicesTableProps) {
       </div>
 
       {/* Lista de facturas */}
-      <div className="bg-white rounded-xl shadow-sm overflow-hidden border border-gray-100">
+      <div className="bg-white dark:bg-slate-900 rounded-xl shadow-sm overflow-hidden border border-gray-100 dark:border-slate-800">
         {/* Header de la lista */}
         <div className={cn(
-          "grid gap-4 p-4 bg-gray-50 border-b border-gray-100 text-sm font-medium text-gray-500",
+          "grid gap-4 p-4 bg-gray-50 dark:bg-slate-800 border-b border-gray-100 dark:border-slate-700 text-sm font-medium text-gray-500 dark:text-gray-400",
           {
             "grid-cols-6": Object.values(visibleColumns).filter(Boolean).length === 6,
             "grid-cols-5": Object.values(visibleColumns).filter(Boolean).length === 5,
@@ -619,9 +651,9 @@ export function InvoicesTable({ data, onUpdateStatus }: InvoicesTableProps) {
         </div>
 
         {/* Lista de facturas */}
-        <div className="divide-y divide-gray-100">
+        <div className="divide-y divide-gray-100 dark:divide-slate-800">
           {paginatedData.length === 0 ? (
-            <div className="p-4 text-center text-gray-500">
+            <div className="p-4 text-center text-gray-500 dark:text-gray-400">
               No se encontraron facturas que coincidan con los filtros.
             </div>
           ) : (
@@ -631,7 +663,7 @@ export function InvoicesTable({ data, onUpdateStatus }: InvoicesTableProps) {
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 className={cn(
-                  "group grid gap-4 p-4 items-center hover:bg-gray-50 transition-colors cursor-pointer",
+                  "group grid gap-4 p-4 items-center hover:bg-gray-50 dark:hover:bg-slate-800 transition-colors cursor-pointer",
                   invoice.status === "ANULADO" && "opacity-60",
                   {
                     "grid-cols-6": Object.values(visibleColumns).filter(Boolean).length === 6,
@@ -648,8 +680,8 @@ export function InvoicesTable({ data, onUpdateStatus }: InvoicesTableProps) {
                 {visibleColumns.invoice_number && (
                   <div className="flex items-center space-x-3">
                     <div>
-                      <p className="font-medium text-gray-900">{invoice.invoice_number}</p>
-                      <p className="text-xs text-gray-500">ID: {invoice.id.slice(0, 8)}</p>
+                      <p className="font-medium text-gray-900 dark:text-gray-100">{invoice.invoice_number}</p>
+                      <p className="text-xs text-gray-500 dark:text-gray-400">ID: {invoice.id.slice(0, 8)}</p>
                     </div>
                   </div>
                 )}
@@ -668,12 +700,12 @@ export function InvoicesTable({ data, onUpdateStatus }: InvoicesTableProps) {
                           }}
                         />
                       ) : (
-                        <AvatarFallback className="bg-primary/10">
-                          <User className="w-4 h-4 text-primary" />
+                        <AvatarFallback className="bg-primary/10 dark:bg-primary/20">
+                          <User className="w-4 h-4 text-primary dark:text-primary/80" />
                         </AvatarFallback>
                       )}
                     </Avatar>
-                    <p className="text-sm font-medium">
+                    <p className="text-sm font-medium text-gray-900 dark:text-gray-100">
                       {invoice.customer ? invoice.customer.name : (invoice.userReference ? invoice.userReference.split('/').pop() : 'Sin usuario asignado')}
                     </p>
                   </div>
@@ -682,18 +714,18 @@ export function InvoicesTable({ data, onUpdateStatus }: InvoicesTableProps) {
                 {/* Fecha de emisión */}
                 {visibleColumns.issue_date && (
                   <div className="flex items-center space-x-2">
-                    <Calendar className="w-4 h-4 text-gray-400" />
-                    <span className="text-sm">{new Date(invoice.issue_date).toLocaleDateString()}</span>
+                    <Calendar className="w-4 h-4 text-gray-400 dark:text-gray-500" />
+                    <span className="text-sm text-gray-700 dark:text-gray-300">{formatInvoiceDate(invoice.issue_date)}</span>
                   </div>
                 )}
 
                 {/* Fecha de vencimiento */}
                 {visibleColumns.due_date && (
                   <div className="flex items-center space-x-2">
-                    <Clock className="w-4 h-4 text-gray-400" />
-                    <span className="text-sm">{new Date(invoice.due_date).toLocaleDateString()}</span>
+                    <Clock className="w-4 h-4 text-gray-400 dark:text-gray-500" />
+                    <span className="text-sm text-gray-700 dark:text-gray-300">{formatInvoiceDate(invoice.due_date)}</span>
                     {invoice.status === "PENDIENTE" && (
-                      <span className="text-xs text-yellow-600 bg-yellow-50 px-2 py-0.5 rounded-full">
+                      <span className="text-xs text-yellow-600 dark:text-yellow-400 bg-yellow-50 dark:bg-yellow-500/10 px-2 py-0.5 rounded-full">
                         {Math.ceil((new Date(invoice.due_date).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24))}d
                       </span>
                     )}
@@ -703,7 +735,7 @@ export function InvoicesTable({ data, onUpdateStatus }: InvoicesTableProps) {
                 {/* Total */}
                 {visibleColumns.total && (
                   <div className="text-right">
-                    <p className="text-sm font-bold text-gray-900">{formatCurrency(parseFloat(invoice.total_amount || '0') || invoice.totalAmount || 0)}</p>
+                    <p className="text-sm font-bold text-gray-900 dark:text-gray-100">{formatCurrency(parseFloat(invoice.total_amount || '0') || invoice.totalAmount || 0)}</p>
                   </div>
                 )}
 
@@ -713,9 +745,9 @@ export function InvoicesTable({ data, onUpdateStatus }: InvoicesTableProps) {
                     <Badge
                       variant="outline"
                       className={cn(
-                        "px-3 py-1",
+                        "px-3 py-1 border-none", // Remove border for better color control
                         getStatusColor(invoice.status),
-                        "text-white"
+                        "text-white dark:text-slate-950"
                       )}
                     >
                       {invoice.status}
@@ -725,13 +757,17 @@ export function InvoicesTable({ data, onUpdateStatus }: InvoicesTableProps) {
                       <DropdownMenuTrigger asChild>
                         <Button 
                           variant="ghost" 
-                          className="h-8 w-8 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
+                          className="h-8 w-8 p-0 opacity-0 group-hover:opacity-100 transition-opacity dark:text-gray-400 dark:hover:bg-slate-800"
                           onClick={(e) => e.stopPropagation()}
                         >
                           <MoreHorizontal className="h-4 w-4" />
                         </Button>
                       </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
+                      <DropdownMenuContent 
+                        align="end" 
+                        onClick={(e) => e.stopPropagation()}
+                        className="bg-white dark:bg-slate-900 border-gray-200 dark:border-slate-700"
+                      >
                         {invoice.status !== "ANULADO" && (
                           <>
                             {invoice.status === "PAGADO" ? (
@@ -740,7 +776,7 @@ export function InvoicesTable({ data, onUpdateStatus }: InvoicesTableProps) {
                                   e.stopPropagation();
                                   handleStatusUpdate(invoice.id, "ANULADO");
                                 }}
-                                className="text-gray-600"
+                                className="text-gray-600 dark:text-gray-300 dark:focus:bg-slate-800"
                               >
                                 <X className="mr-2 h-4 w-4" />
                                 Anular Factura
@@ -752,7 +788,7 @@ export function InvoicesTable({ data, onUpdateStatus }: InvoicesTableProps) {
                                     e.stopPropagation();
                                     handleStatusUpdate(invoice.id, "PAGADO");
                                   }}
-                                  className="text-green-600"
+                                  className="text-green-600 dark:text-green-400 dark:focus:bg-slate-800"
                                 >
                                   <Check className="mr-2 h-4 w-4" />
                                   Marcar como Pagado
@@ -762,7 +798,7 @@ export function InvoicesTable({ data, onUpdateStatus }: InvoicesTableProps) {
                                     e.stopPropagation();
                                     handleStatusUpdate(invoice.id, "PENDIENTE");
                                   }}
-                                  className="text-yellow-600"
+                                  className="text-yellow-600 dark:text-yellow-400 dark:focus:bg-slate-800"
                                 >
                                   <Clock className="mr-2 h-4 w-4" />
                                   Marcar como Pendiente
@@ -772,7 +808,7 @@ export function InvoicesTable({ data, onUpdateStatus }: InvoicesTableProps) {
                                     e.stopPropagation();
                                     handleStatusUpdate(invoice.id, "ATRASADO");
                                   }}
-                                  className="text-red-600"
+                                  className="text-red-600 dark:text-red-400 dark:focus:bg-slate-800"
                                 >
                                   <AlertCircle className="mr-2 h-4 w-4" />
                                   Marcar como Atrasado
@@ -794,7 +830,7 @@ export function InvoicesTable({ data, onUpdateStatus }: InvoicesTableProps) {
       {/* Paginación */}
       {filteredData.length > 0 && (
         <div className="flex justify-between items-center">
-          <div className="text-sm text-gray-500">
+          <div className="text-sm text-gray-500 dark:text-gray-400">
             Mostrando {((currentPage - 1) * ITEMS_PER_PAGE) + 1} a {Math.min(currentPage * ITEMS_PER_PAGE, filteredData.length)} de {filteredData.length} facturas
           </div>
           <Pagination 
@@ -802,6 +838,7 @@ export function InvoicesTable({ data, onUpdateStatus }: InvoicesTableProps) {
             pageSize={ITEMS_PER_PAGE}
             currentPage={currentPage}
             onPageChange={setCurrentPage} 
+            // Assuming Pagination component handles dark mode
           />
         </div>
       )}
@@ -811,6 +848,7 @@ export function InvoicesTable({ data, onUpdateStatus }: InvoicesTableProps) {
         invoice={selectedInvoice}
         open={isDetailOpen}
         onOpenChange={setIsDetailOpen}
+        // Assuming InvoiceDetailDialog handles dark mode internally
       />
     </div>
   );

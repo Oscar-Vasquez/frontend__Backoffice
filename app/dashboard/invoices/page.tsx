@@ -101,7 +101,7 @@ export default function InvoicesPage() {
           };
         });
 
-        console.log('🔄 Datos normalizados:', normalizedData);
+        console.log('�� Datos normalizados:', normalizedData);
         setInvoices(normalizedData);
       } catch (error) {
         console.error('❌ Error:', error);
@@ -207,25 +207,25 @@ export default function InvoicesPage() {
 
   return (
     <div className="space-y-6">
-      <div className="relative bg-white rounded-lg border border-gray-100 overflow-hidden mb-8">
+      <div className="relative bg-white dark:bg-slate-900 rounded-lg border border-gray-100 dark:border-slate-800 overflow-hidden mb-8">
         {/* Línea decorativa superior */}
-        <div className="absolute top-0 left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-gray-200 to-transparent" />
+        <div className="absolute top-0 left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-gray-200 dark:via-slate-700 to-transparent" />
         
         {/* Contenido del encabezado */}
         <div className="relative px-8 py-16">
           <div className="max-w-3xl mx-auto text-center">
-            <h1 className="text-3xl font-light text-gray-900">
+            <h1 className="text-3xl font-light text-gray-900 dark:text-gray-100">
               Gestión de Facturas
             </h1>
-            <div className="mt-2 h-[2px] w-12 bg-gray-200 mx-auto" />
-            <p className="mt-4 text-base text-gray-500 max-w-xl mx-auto">
+            <div className="mt-2 h-[2px] w-12 bg-gray-200 dark:bg-slate-700 mx-auto" />
+            <p className="mt-4 text-base text-gray-500 dark:text-gray-400 max-w-xl mx-auto">
               Administra y da seguimiento a todas tus facturas en un solo lugar
             </p>
           </div>
         </div>
         
         {/* Línea decorativa inferior */}
-        <div className="absolute bottom-0 left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-gray-200 to-transparent" />
+        <div className="absolute bottom-0 left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-gray-200 dark:via-slate-700 to-transparent" />
       </div>
 
       <div className="mt-6">

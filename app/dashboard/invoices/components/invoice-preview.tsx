@@ -1,10 +1,32 @@
 "use client";
 
-import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Download, Send } from "lucide-react";
+import { formatCurrency } from "@/lib/utils";
+import { Eye, Printer, Download, Send } from "lucide-react";
 import Image from "next/image";
-import { formatInvoiceDate } from "@/lib/utils";
+
+// --- BEGIN INLINED FUNCTION ---
+function formatInvoiceDate(date: string | Date): string {
+  if (!date) return '';
+  try {
+    const d = new Date(date);
+    // Check if the date is valid
+    if (isNaN(d.getTime())) {
+      console.warn('Invalid date passed to formatInvoiceDate:', date);
+      return 'Fecha inválida';
+    }
+    return d.toLocaleDateString('es-ES', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
+    });
+  } catch (error) {
+    console.error('Error formatting date:', date, error);
+    return 'Error fecha';
+  }
+}
+// --- END INLINED FUNCTION ---
 
 interface InvoicePreviewProps {
   isOpen: boolean;
