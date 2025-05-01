@@ -56,15 +56,6 @@ export function UserProfile({ user, onActivate, onClose }: UserProfileProps) {
             >
               Cerrar
             </Button>
-            {!isActive && (
-              <Button 
-                className="gap-2 bg-green-500 hover:bg-green-600"
-                onClick={onActivate}
-              >
-                <CheckCircle2 className="w-4 h-4" />
-                Activar Cliente
-              </Button>
-            )}
           </div>
         </div>
 

@@ -18,9 +18,10 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { PaymentMethodSummary } from "./payment-method-summary";
 import { CashClosureActions } from "./cash-closure-actions";
 import { TodayTransactions } from "./today-transactions";
-import { ClockIcon, CalendarIcon, DollarSignIcon, ListIcon, AlertCircleIcon } from "lucide-react";
+import { ClockIcon, CalendarIcon, DollarSignIcon, ListIcon, AlertCircleIcon, InfoIcon, AlertTriangleIcon, CheckCircleIcon } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Button } from '@/components/ui/button';
 
 interface CurrentCashClosureProps {
   cashClosure: CashClosure;

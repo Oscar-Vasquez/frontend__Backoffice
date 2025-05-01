@@ -277,7 +277,6 @@ export default function UsersTable({ users, onUpdateStatus }: UsersTableProps) {
             <TableHead className="dark:text-gray-300">Email</TableHead>
             <TableHead className="dark:text-gray-300">Estado</TableHead>
             <TableHead className="dark:text-gray-300">Fecha de Registro</TableHead>
-            <TableHead className="text-right dark:text-gray-300">Acciones</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -309,50 +308,8 @@ export default function UsersTable({ users, onUpdateStatus }: UsersTableProps) {
                 </Badge>
               </TableCell>
               <TableCell className="dark:text-gray-300">
-                {user.createdAt ? formatDate(user.createdAt) : 'N/A'}
-              </TableCell>
-              <TableCell className="text-right">
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button 
-                      variant="ghost" 
-                      className="h-8 w-8 p-0 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full"
-                    >
-                      <span className="sr-only">Abrir menú</span>
-                      <MoreHorizontal className="h-4 w-4 dark:text-gray-300" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" className="w-[160px] dark:bg-gray-800 dark:border-gray-700">
-                    <DropdownMenuItem
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleStatusChange(user.id, user.accountStatus);
-                      }}
-                      className={`text-sm cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors ${
-                        user.accountStatus ? 'text-red-500 hover:text-red-600 dark:text-red-400 dark:hover:text-red-300' : 'text-green-500 hover:text-green-600 dark:text-green-400 dark:hover:text-green-300'
-                      }`}
-                    >
-                      {user.accountStatus ? (
-                        <>
-                          <Ban className="h-4 w-4 mr-2" />
-                          Desactivar
-                        </>
-                      ) : (
-                        <>
-                          <CheckCircle className="h-4 w-4 mr-2" />
-                          Activar
-                        </>
-                      )}
-                    </DropdownMenuItem>
-                    <DropdownMenuItem
-                      onClick={(e) => handleOpenEmailModal(user, e)}
-                      className="text-sm cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors text-blue-500 hover:text-blue-600 dark:text-blue-400 dark:hover:text-blue-300"
-                    >
-                      <Mail className="h-4 w-4 mr-2" />
-                      Enviar mensaje
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
+                {/* {user.createdAt ? formatDate(user.createdAt) : 'N/A'} */}
+                {user.createdAt ? user.createdAt : 'N/A'} {/* Temporarily show raw date */}
               </TableCell>
             </TableRow>
           ))}
@@ -363,9 +320,6 @@ export default function UsersTable({ users, onUpdateStatus }: UsersTableProps) {
       <AlertDialog open={isConfirmOpen} onOpenChange={setIsConfirmOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>
-              {actionType === 'activate' ? '¿Activar cliente?' : '¿Desactivar cliente?'}
-            </AlertDialogTitle>
             <AlertDialogDescription>
               {actionType === 'activate' 
                 ? 'El cliente podrá acceder a todos los servicios nuevamente.'
@@ -497,15 +451,19 @@ export default function UsersTable({ users, onUpdateStatus }: UsersTableProps) {
                         <div>
                           <p className="text-gray-500">Fecha de Registro</p>
                           <p className="font-medium">
-                            {currentUser.createdAt ? formatDate(new Date(currentUser.createdAt)) : 'N/A'}
+                            {/* {currentUser.createdAt ? formatDate(new Date(currentUser.createdAt)) : 'N/A'} */}
+                            {currentUser.createdAt ? new Date(currentUser.createdAt).toLocaleDateString('es-ES') : 'N/A'} {/* Temporarily format inline */}
                           </p>
                         </div>
                         <div>
                           <p className="text-gray-500">Último Acceso</p>
                           <p className="font-medium">
-                            {currentUser.lastSeen && currentUser.lastSeen !== 'null' 
+                            {/* {currentUser.lastSeen && currentUser.lastSeen !== 'null' 
                               ? formatDate(new Date(currentUser.lastSeen)) 
-                              : 'N/A'}
+                              : 'N/A'} */}
+                            {currentUser.lastSeen && currentUser.lastSeen !== 'null' 
+                              ? new Date(currentUser.lastSeen).toLocaleDateString('es-ES') 
+                              : 'N/A'} {/* Temporarily format inline */}
                           </p>
                         </div>
                       </div>
@@ -516,42 +474,6 @@ export default function UsersTable({ users, onUpdateStatus }: UsersTableProps) {
                 <div className="mt-6 flex justify-end gap-2">
                   <Button variant="outline" onClick={() => setIsProfileOpen(false)}>
                     Cerrar
-                  </Button>
-                  <Button
-                    variant={currentUser.accountStatus ? 'destructive' : 'default'}
-                    onClick={() => {
-                      // Guardar los valores que necesitamos antes de cerrar el diálogo
-                      const userId = currentUser.id;
-                      const currentStatus = currentUser.accountStatus;
-                      
-                      // Log para diagnóstico
-                      console.log('🔄 Actualizando desde perfil:', {
-                        userId,
-                        currentStatus,
-                        newStatus: !currentStatus
-                      });
-                      
-                      // Primero cerrar el perfil y limpiar completamente su estado
-                      setIsProfileOpen(false);
-                      setCurrentUser(null);
-                      
-                      // Esperar a que se cierre el perfil antes de abrir el diálogo de confirmación
-                      setTimeout(() => {
-                        handleStatusChange(userId, currentStatus);
-                      }, 100); // Incrementar el tiempo de espera para asegurar el cierre completo
-                    }}
-                  >
-                    {currentUser.accountStatus ? (
-                      <>
-                        <Ban className="h-4 w-4 mr-2" />
-                        Desactivar Cliente
-                      </>
-                    ) : (
-                      <>
-                        <CheckCircle className="h-4 w-4 mr-2" />
-                        Activar Cliente
-                      </>
-                    )}
                   </Button>
                 </div>
               </div>

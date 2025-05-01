@@ -188,25 +188,25 @@ export default function InvoicesPage() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <Spinner className="w-8 h-8" />
+      <div className="flex items-center justify-center min-h-screen bg-white dark:bg-slate-950">
+        <Spinner className="w-8 h-8 text-primary dark:text-primary/80" />
       </div>
     );
   }
 
   if (error) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
+      <div className="flex items-center justify-center min-h-screen bg-white dark:bg-slate-950">
         <div className="text-center">
-          <h2 className="text-2xl font-bold text-red-600 mb-4">Error</h2>
-          <p className="text-gray-600">{error}</p>
+          <h2 className="text-2xl font-bold text-red-600 dark:text-red-500 mb-4">Error</h2>
+          <p className="text-gray-600 dark:text-gray-400">{error}</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 pb-8 dark:text-gray-200">
       <div className="relative bg-white dark:bg-slate-900 rounded-lg border border-gray-100 dark:border-slate-800 overflow-hidden mb-8">
         {/* Línea decorativa superior */}
         <div className="absolute top-0 left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-gray-200 dark:via-slate-700 to-transparent" />

@@ -2,9 +2,9 @@
 
 import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
-import { format, formatDistanceToNow } from "date-fns";
+import { format as formatWithDateFns, formatDistanceToNow } from "date-fns"; // Keep date-fns if needed elsewhere
 import { es } from "date-fns/locale";
-import { cn } from "@/lib/utils";
+import { cn, formatDate, formatDateOnly } from "@/lib/utils"; // Import centralized functions
 import { Operator, OperatorsService } from "@/app/services/operators.service";
 
 import {
@@ -603,17 +603,6 @@ const OperatorDetailsDialog = ({ operator, trigger }: OperatorDetailsDialogProps
     rawOperator: operator
   });
 
-  // Función para formatear fechas
-  const formatDate = (date: Date | string | null | undefined) => {
-    if (!date) return "No disponible";
-    try {
-      return format(new Date(date), "dd MMM yyyy, HH:mm", { locale: es });
-    } catch (error) {
-      console.error("Error al formatear fecha:", error);
-      return "Formato inválido";
-    }
-  };
-
   // Mapeo de roles para mostrar en la UI
   const getRoleDisplay = (role: string) => {
     const roleMap: Record<string, { label: string; color: string; icon: any }> = {
@@ -944,7 +933,7 @@ const OperatorDetailsDialog = ({ operator, trigger }: OperatorDetailsDialogProps
                       <div className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-1.5 group-hover:text-indigo-500 dark:group-hover:text-indigo-400 transition-colors">Último acceso</div>
                       <div className="text-base font-medium text-gray-900 dark:text-gray-100 flex items-center gap-2 bg-gray-50 dark:bg-gray-800/70 p-2.5 rounded-lg border border-gray-100 dark:border-gray-700">
                         <ClockIcon className="h-4 w-4 text-indigo-500 dark:text-indigo-400" />
-                        {formatDate(operator.lastLoginAt)}
+                        {formatDate(operator.lastLoginAt || new Date(0))} {/* Use formatDate (with time) */}
                       </div>
                     </div>
                     <div className="col-span-3 group">
@@ -986,14 +975,14 @@ const OperatorDetailsDialog = ({ operator, trigger }: OperatorDetailsDialogProps
                         <div className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-1.5 group-hover:text-emerald-500 dark:group-hover:text-emerald-400 transition-colors">Fecha de creación</div>
                         <div className="text-base font-medium text-gray-900 dark:text-gray-100 flex items-center gap-2 bg-gray-50 dark:bg-gray-800/70 p-2.5 rounded-lg border border-gray-100 dark:border-gray-700">
                           <CalendarIcon className="h-4 w-4 text-emerald-500 dark:text-emerald-400" />
-                          {formatDate(normalizedOperator.createdAt)}
+                          {formatDate(normalizedOperator.createdAt || new Date(0))} {/* Use formatDate (with time) */}
                         </div>
                       </div>
                       <div className="group">
                         <div className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-1.5 group-hover:text-emerald-500 dark:group-hover:text-emerald-400 transition-colors">Última actualización</div>
                         <div className="text-base font-medium text-gray-900 dark:text-gray-100 flex items-center gap-2 bg-gray-50 dark:bg-gray-800/70 p-2.5 rounded-lg border border-gray-100 dark:border-gray-700">
                           <ClockIcon className="h-4 w-4 text-emerald-500 dark:text-emerald-400" />
-                          {formatDate(normalizedOperator.updatedAt)}
+                          {formatDate(normalizedOperator.updatedAt || new Date(0))} {/* Use formatDate (with time) */}
                         </div>
                       </div>
                       <div className="group">
@@ -1009,18 +998,20 @@ const OperatorDetailsDialog = ({ operator, trigger }: OperatorDetailsDialogProps
                         <div className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-1.5 group-hover:text-emerald-500 dark:group-hover:text-emerald-400 transition-colors">Fecha de nacimiento</div>
                         <div className="text-base font-medium text-gray-900 dark:text-gray-100 flex items-center gap-2 bg-gray-50 dark:bg-gray-800/70 p-2.5 rounded-lg border border-gray-100 dark:border-gray-700">
                           <CalendarIcon className="h-4 w-4 text-emerald-500 dark:text-emerald-400" />
-                          {(normalizedOperator.birth_date || normalizedOperator.birthdate) 
-                            ? formatDate(normalizedOperator.birth_date || normalizedOperator.birthdate).split(",")[0] 
-                            : "No disponible"}
+                          {(() => {
+                            const birthDateValue = normalizedOperator.birth_date || normalizedOperator.birthdate;
+                            return birthDateValue ? formatDateOnly(birthDateValue) : "No disponible";
+                          })()}
                         </div>
                       </div>
                       <div className="group">
                         <div className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-1.5 group-hover:text-emerald-500 dark:group-hover:text-emerald-400 transition-colors">Fecha de contratación</div>
                         <div className="text-base font-medium text-gray-900 dark:text-gray-100 flex items-center gap-2 bg-gray-50 dark:bg-gray-800/70 p-2.5 rounded-lg border border-gray-100 dark:border-gray-700">
                           <CalendarIcon className="h-4 w-4 text-emerald-500 dark:text-emerald-400" />
-                          {(normalizedOperator.hire_date || normalizedOperator.hireDate) 
-                            ? formatDate(normalizedOperator.hire_date || normalizedOperator.hireDate).split(",")[0] 
-                            : "No disponible"}
+                          {(() => {
+                            const hireDateValue = normalizedOperator.hire_date || normalizedOperator.hireDate;
+                            return hireDateValue ? formatDateOnly(hireDateValue) : "No disponible";
+                          })()}
                         </div>
                       </div>
                       <div className="group">
@@ -1336,7 +1327,8 @@ const OperatorDetailsDialog = ({ operator, trigger }: OperatorDetailsDialogProps
                       </div>
                       <div className="flex-1 min-w-0">
                         <div className="text-xs text-gray-500 dark:text-gray-400 mb-0.5">Creado</div>
-                        <div className="font-medium">{formatDate(normalizedOperator.createdAt).split(',')[0]}</div>
+                        {/* Ensure date exists before formatting */}
+                        <div className="font-medium">{normalizedOperator.createdAt ? formatDateOnly(normalizedOperator.createdAt) : 'Fecha no disponible'}</div>
                       </div>
                     </div>
                   </div>
@@ -1447,7 +1439,7 @@ const OperatorDetailsDialog = ({ operator, trigger }: OperatorDetailsDialogProps
                 <Button
                   onClick={handleClose}
                   className={`h-12 px-5 w-full relative overflow-hidden bg-gradient-to-r ${getThemeGradient()} text-white transition-all duration-200 rounded-xl text-base shadow-lg hover:shadow-xl hover:scale-[1.02] active:scale-[0.98] focus:ring-2 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-gray-900 focus:ring-blue-500 dark:focus:ring-blue-400`}
-                  //data-action="close-dialog"
+                  //data-action="close-dialog" // Ensure this comment doesn't break JSX if inside {}
                 >
                   <div className="absolute inset-0 bg-[url('/noise.png')] opacity-10" />
                   <span className="flex items-center justify-center gap-1.5 font-medium">
@@ -1455,12 +1447,12 @@ const OperatorDetailsDialog = ({ operator, trigger }: OperatorDetailsDialogProps
                   </span>
                 </Button>
               </div>
-            </div>
-          </div>
-          )}
-        </DialogContent>
-      </Dialog>
-      
+            </div> {/* Closes "Panel Lateral" div */}
+          </div> 
+          )} {/* Closes the isLoading conditional rendering */}
+        </DialogContent> {/* Ensure this closing tag is present and correct */}
+      </Dialog> {/* Ensure this closing tag is present and correct */}
+
       {/* Diálogo para visualizar la imagen */}
       {normalizedOperator.photo && normalizedOperator.photo !== "null" && normalizedOperator.photo !== "undefined" && normalizedOperator.photo.trim() !== "" && (
         <ImageViewerDialog
@@ -1476,36 +1468,27 @@ const OperatorDetailsDialog = ({ operator, trigger }: OperatorDetailsDialogProps
         .scroll-content::-webkit-scrollbar, .sidebar-content::-webkit-scrollbar {
           width: 6px;
         }
-        
         .scroll-content::-webkit-scrollbar-track, .sidebar-content::-webkit-scrollbar-track {
           background: transparent;
         }
-        
         .scroll-content::-webkit-scrollbar-thumb, .sidebar-content::-webkit-scrollbar-thumb {
           background: rgba(156, 163, 175, 0.3);
           border-radius: 3px;
         }
-        
         .scroll-content::-webkit-scrollbar-thumb:hover, .sidebar-content::-webkit-scrollbar-thumb:hover {
           background: rgba(156, 163, 175, 0.5);
         }
-        
         .dark .scroll-content::-webkit-scrollbar-thumb, .dark .sidebar-content::-webkit-scrollbar-thumb {
           background: rgba(75, 85, 99, 0.5);
         }
-        
         .dark .scroll-content::-webkit-scrollbar-thumb:hover, .dark .sidebar-content::-webkit-scrollbar-thumb:hover {
           background: rgba(75, 85, 99, 0.7);
         }
-        
-        /* Fix for blurry text */
         .dialog-content * {
           text-rendering: optimizeLegibility;
           -webkit-font-smoothing: antialiased;
           -moz-osx-font-smoothing: grayscale;
         }
-        
-        /* Remove close button from Radix UI dialogs - this should target the X button */
         [role="dialog"] button:has(.lucide-x),
         [role="dialog"] button.absolute.right-4.top-4,
         [role="dialog"] [data-radix-dialog-close],
@@ -1518,8 +1501,6 @@ const OperatorDetailsDialog = ({ operator, trigger }: OperatorDetailsDialogProps
           visibility: hidden !important;
           pointer-events: none !important;
         }
-        
-        /* Direct selector for the X in the DialogClose */
         [role="dialog"] > div > button > svg,
         button[role="button"] > svg[width="15"],
         button[role="button"] > svg[width="12"],
@@ -1527,28 +1508,20 @@ const OperatorDetailsDialog = ({ operator, trigger }: OperatorDetailsDialogProps
         button[role="button"] > svg[width="24"] {
           display: none !important;
         }
-        
-        /* Target by position - anything positioned absolutely in the top-right corner */
         button.absolute[style*="top:"][style*="right:"],
         .absolute.right-4.top-4,
         .absolute.top-4.right-4,
         [style*="position: absolute"][style*="top:"][style*="right:"] {
           display: none !important;
         }
-        
-        /* Extra insurance for Primitive.X component */
-        .X {
+        .X { /* Ensure this rule is correct and closed */
           display: none !important;
         }
-        
-        /* Ensure crisp text for all dialog elements */
         .dialog-content {
           transform: translateZ(0);
           backface-visibility: hidden;
         }
-        
-        /* Sharper text for important UI elements */
-        .dialog-content h3, 
+        .dialog-content h3,
         .dialog-content .font-medium,
         .dialog-content .font-semibold,
         .dialog-content .text-base,
@@ -1557,15 +1530,11 @@ const OperatorDetailsDialog = ({ operator, trigger }: OperatorDetailsDialogProps
         .dialog-content .badge {
           letter-spacing: -0.01em;
         }
-        
-        /* Fix dialog positioning to be centered */
         [role="dialog"][data-state="open"] {
           display: flex;
           align-items: center;
           justify-content: center;
         }
-        
-        /* Ensure the dialog overlay covers the entire screen */
         [data-radix-popper-content-wrapper] {
           position: fixed !important;
           top: 50% !important;
@@ -1578,20 +1547,18 @@ const OperatorDetailsDialog = ({ operator, trigger }: OperatorDetailsDialogProps
           height: auto;
           margin: 0 !important;
         }
-        
-        /* Responsive adjustments */
         @media (max-width: 950px) {
           [data-radix-popper-content-wrapper] {
             min-width: 90vw !important;
           }
-          
           .dialog-content > div {
             grid-template-columns: 1fr !important;
           }
         }
-      `}</style>
-    </>
-  );
-};
+      `}</style> {/* Ensure closing backtick and tag */}
+
+    </> // Ensure this closing tag is present and correct
+  ); // Ensure this closing parenthesis/semicolon is correct
+}; // Ensure this closing brace/semicolon is correct
 
 export default OperatorDetailsDialog; 

@@ -26,10 +26,10 @@ export function formatDate(date: string | Date): string {
   return new Date(date).toLocaleDateString('es-ES', options);
 }
 
-export function formatInvoiceDate(date: string | Date): string {
+export function formatDateOnly(date: string | Date): string {
   if (!date) return '';
   const d = new Date(date);
-  return d.toLocaleDateString('es-ES', {
+  return d.toLocaleDateString('en-US', {
     year: 'numeric',
     month: 'long',
     day: 'numeric'
@@ -74,15 +74,11 @@ export function getHSLValue(hex: string): string {
   return d3.color(hex)!.formatHsl().slice(4, -1).replaceAll(",", "");
 }
 
-export const formatCurrency = (amount: number | string) => {
-  if (amount === null || amount === undefined) return 'US$ 0.00';
-  
-  const numericAmount = typeof amount === 'string' ? parseFloat(amount) : amount;
-  
-  if (isNaN(numericAmount)) return 'US$ 0.00';
-  
-  return new Intl.NumberFormat('es-ES', {
-    style: 'currency',
-    currency: 'USD'
-  }).format(numericAmount);
-};
+export function formatCurrency(amount: number | null | undefined): string {
+  if (amount === null || amount === undefined || typeof amount !== 'number' || isNaN(amount)) {
+    return '$ 0.00';
+  }
+
+  const formattedAmount = amount.toFixed(2);
+  return `$ ${formattedAmount}`;
+}

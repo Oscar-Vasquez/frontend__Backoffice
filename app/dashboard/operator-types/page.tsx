@@ -176,7 +176,7 @@ export default function OperatorTypesPage() {
   };
 
   return (
-    <div className="container mx-auto py-10">
+    <div className="container mx-auto py-10 bg-background">
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-3xl font-bold">Tipos de Operadores</h1>
         <Dialog open={isCreating} onOpenChange={setIsCreating}>
@@ -291,7 +291,7 @@ export default function OperatorTypesPage() {
               ))}
             </div>
           ) : error ? (
-            <div className="bg-red-50 p-4 rounded-md text-red-800">
+            <div className="bg-red-50 dark:bg-red-900/20 p-4 rounded-md text-red-800 dark:text-red-300 border border-red-100 dark:border-red-800/30">
               <p>{error}</p>
               <Button 
                 variant="outline" 
@@ -304,7 +304,7 @@ export default function OperatorTypesPage() {
             </div>
           ) : operatorTypes.length === 0 ? (
             <div className="text-center py-10">
-              <p className="text-gray-500 mb-4">No hay tipos de operadores registrados</p>
+              <p className="text-gray-500 dark:text-gray-400 mb-4">No hay tipos de operadores registrados</p>
               <Button onClick={() => setIsCreating(true)}>
                 <PlusIcon className="mr-2 h-4 w-4" />
                 Crear Tipo de Operador
@@ -331,19 +331,19 @@ export default function OperatorTypesPage() {
                         <div className="flex flex-wrap gap-1">
                           {Object.entries(type.permissions).slice(0, 3).map(([key, value]) => (
                             value ? (
-                              <Badge key={key} variant="outline" className="bg-emerald-50 text-emerald-700 border-emerald-200">
+                              <Badge key={key} variant="outline" className="bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800/30">
                                 {key}
                               </Badge>
                             ) : null
                           ))}
                           {Object.keys(type.permissions).length > 3 && (
-                            <Badge variant="outline" className="bg-gray-50">
+                            <Badge variant="outline" className="bg-gray-100 dark:bg-gray-700/50 text-gray-600 dark:text-gray-300 border-gray-200 dark:border-gray-700">
                               +{Object.keys(type.permissions).length - 3} más
                             </Badge>
                           )}
                         </div>
                       ) : (
-                        <span className="text-gray-400 text-sm italic">Sin permisos</span>
+                        <span className="text-gray-400 dark:text-gray-500 text-sm italic">Sin permisos</span>
                       )}
                     </TableCell>
                     <TableCell>{formatDate(type.created_at)}</TableCell>
@@ -368,7 +368,7 @@ export default function OperatorTypesPage() {
                         <Button 
                           variant="outline" 
                           size="icon" 
-                          className="text-red-500 hover:text-red-700"
+                          className="text-red-500 hover:bg-red-50 hover:text-red-700 dark:text-red-400 dark:hover:bg-red-900/20 dark:hover:text-red-300"
                           onClick={() => openDeleteDialog(type)}
                           title="Eliminar"
                         >
@@ -456,7 +456,7 @@ export default function OperatorTypesPage() {
                     control={form.control}
                     name={`permissions.${permission.key}`}
                     render={({ field }) => (
-                      <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm">
+                      <FormItem className="flex flex-row items-center justify-between rounded-lg border dark:border-gray-700 p-3 shadow-sm">
                         <div className="space-y-0.5">
                           <FormLabel>{permission.label}</FormLabel>
                         </div>
@@ -495,7 +495,7 @@ export default function OperatorTypesPage() {
             <AlertDialogTitle>¿Estás seguro?</AlertDialogTitle>
             <AlertDialogDescription>
               Esta acción no se puede deshacer. Esto eliminará permanentemente el tipo de operador
-              {currentOperatorType && <span className="font-semibold"> "{currentOperatorType.name}"</span>}.
+              {currentOperatorType && <span className="font-semibold text-gray-900 dark:text-gray-100"> "{currentOperatorType.name}"</span>}.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

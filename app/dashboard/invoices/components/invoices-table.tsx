@@ -42,14 +42,14 @@ import { Pagination } from "@/components/ui/pagination";
 import { InvoiceDetailDialog } from "./invoice-detail-dialog";
 import { ColumnDef } from "@tanstack/react-table";
 
-// --- BEGIN INLINED FUNCTION ---
-function formatInvoiceDate(date: string | Date): string {
+// Define formatDateOnly locally
+function formatDateOnly(date: string | Date): string {
   if (!date) return '';
   try {
     const d = new Date(date);
-    // Check if the date is valid
+    // Check if the date is valid before formatting
     if (isNaN(d.getTime())) {
-      console.warn('Invalid date passed to formatInvoiceDate:', date);
+      console.warn("Invalid date provided to formatDateOnly:", date);
       return 'Fecha inválida';
     }
     return d.toLocaleDateString('es-ES', {
@@ -58,11 +58,10 @@ function formatInvoiceDate(date: string | Date): string {
       day: 'numeric'
     });
   } catch (error) {
-    console.error('Error formatting date:', date, error);
-    return 'Error fecha';
+    console.error("Error formatting date:", date, error);
+    return 'Error fecha'; // Return an error string
   }
 }
-// --- END INLINED FUNCTION ---
 
 interface InvoicesTableProps {
   data: Invoice[];
@@ -715,7 +714,7 @@ export function InvoicesTable({ data, onUpdateStatus }: InvoicesTableProps) {
                 {visibleColumns.issue_date && (
                   <div className="flex items-center space-x-2">
                     <Calendar className="w-4 h-4 text-gray-400 dark:text-gray-500" />
-                    <span className="text-sm text-gray-700 dark:text-gray-300">{formatInvoiceDate(invoice.issue_date)}</span>
+                    <span className="text-sm text-gray-700 dark:text-gray-300">{formatDateOnly(invoice.issue_date)}</span>
                   </div>
                 )}
 
@@ -723,7 +722,7 @@ export function InvoicesTable({ data, onUpdateStatus }: InvoicesTableProps) {
                 {visibleColumns.due_date && (
                   <div className="flex items-center space-x-2">
                     <Clock className="w-4 h-4 text-gray-400 dark:text-gray-500" />
-                    <span className="text-sm text-gray-700 dark:text-gray-300">{formatInvoiceDate(invoice.due_date)}</span>
+                    <span className="text-sm text-gray-700 dark:text-gray-300">{formatDateOnly(invoice.due_date)}</span>
                     {invoice.status === "PENDIENTE" && (
                       <span className="text-xs text-yellow-600 dark:text-yellow-400 bg-yellow-50 dark:bg-yellow-500/10 px-2 py-0.5 rounded-full">
                         {Math.ceil((new Date(invoice.due_date).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24))}d

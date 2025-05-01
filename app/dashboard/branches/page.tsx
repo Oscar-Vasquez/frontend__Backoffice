@@ -164,10 +164,10 @@ export default function BranchesPage() {
   }, [branchesByProvince]);
 
   return (
-    <div className="container mx-auto p-6 space-y-8">
+    <div className="container mx-auto p-6 space-y-8 bg-background">
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Sucursales</h1>
+          <h1 className="text-3xl font-bold tracking-tight dark:text-foreground">Sucursales</h1>
           <p className="text-muted-foreground mt-2">
             Sistema de gestión de sucursales
           </p>
@@ -181,16 +181,16 @@ export default function BranchesPage() {
         </Button>
       </div>
 
-      <Card className="p-4">
+      <Card className="p-4 dark:bg-card dark:border-border">
         <div className="flex flex-col sm:flex-row gap-4">
           <div className="flex-1">
             <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500 h-4 w-4" />
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500 dark:text-gray-400 h-4 w-4" />
               <Input
                 placeholder="Buscar por nombre, dirección o provincia..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10"
+                className="pl-10 dark:bg-input dark:border-input dark:text-foreground dark:placeholder:text-muted-foreground"
               />
             </div>
           </div>
@@ -198,13 +198,13 @@ export default function BranchesPage() {
             value={selectedProvince} 
             onValueChange={setSelectedProvince}
           >
-            <SelectTrigger className="w-full sm:w-[200px]">
+            <SelectTrigger className="w-full sm:w-[200px] dark:bg-input dark:border-input dark:text-foreground">
               <SelectValue placeholder="Todas las provincias" />
             </SelectTrigger>
-            <SelectContent>
+            <SelectContent className="dark:bg-popover dark:text-popover-foreground dark:border-border">
               <SelectItem value="todas">Todas las provincias</SelectItem>
               {provinces.map(province => (
-                <SelectItem key={province} value={province}>
+                <SelectItem key={province} value={province} className="dark:hover:bg-muted">
                   {province}
                 </SelectItem>
               ))}
@@ -218,14 +218,14 @@ export default function BranchesPage() {
           <Spinner />
         </div>
       ) : error ? (
-        <Card className="p-6 flex flex-col items-center justify-center min-h-[400px]">
+        <Card className="p-6 flex flex-col items-center justify-center min-h-[400px] dark:bg-card dark:border-border">
           <div className="text-destructive text-lg font-semibold mb-4">Error al cargar sucursales</div>
           <p className="text-muted-foreground text-center mb-6">{error}</p>
           <Button onClick={fetchBranches}>Reintentar</Button>
         </Card>
       ) : !hasResults ? (
-        <Card className="p-6 flex flex-col items-center justify-center min-h-[400px]">
-          <div className="text-lg font-semibold mb-2">No se encontraron sucursales</div>
+        <Card className="p-6 flex flex-col items-center justify-center min-h-[400px] dark:bg-card dark:border-border">
+          <div className="text-lg font-semibold mb-2 dark:text-foreground">No se encontraron sucursales</div>
           <p className="text-muted-foreground text-center mb-6">
             {searchTerm || selectedProvince !== 'todas' 
               ? 'No hay sucursales que coincidan con tu búsqueda.' 
@@ -242,26 +242,26 @@ export default function BranchesPage() {
       ) : (
         <div className="space-y-6">
           {Object.entries(branchesByProvince).map(([province, provinceBranches]) => (
-            <Card key={province} className="overflow-hidden">
-              <div className="bg-gradient-to-r from-gray-50 to-white p-4 border-b">
+            <Card key={province} className="overflow-hidden dark:bg-card dark:border-border">
+              <div className="bg-gray-50 dark:bg-muted/50 p-4 border-b dark:border-border">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
-                    <MapPin className="h-5 w-5 text-gray-500" />
-                    <h2 className="text-xl font-semibold">{province}</h2>
+                    <MapPin className="h-5 w-5 text-gray-500 dark:text-gray-400" />
+                    <h2 className="text-xl font-semibold dark:text-foreground">{province}</h2>
                   </div>
-                  <Badge variant="secondary">
+                  <Badge variant="secondary" className="dark:bg-muted dark:text-muted-foreground dark:border-border">
                     {provinceBranches.length} {provinceBranches.length === 1 ? 'sucursal' : 'sucursales'}
                   </Badge>
                 </div>
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 p-4">
                 {provinceBranches.map(branch => (
-                  <Card key={branch.id} className="overflow-hidden hover:shadow-md transition-shadow">
+                  <Card key={branch.id} className="overflow-hidden hover:shadow-md transition-shadow dark:bg-card-foreground/5 dark:border-border dark:hover:shadow-lg dark:shadow-slate-800/[.2]">
                     <div className="p-4 space-y-4">
                       <div className="flex justify-between items-start">
                         <div className="space-y-1">
-                          <h3 className="font-semibold text-lg">{branch.name}</h3>
-                          <Badge variant={branch.isActive ? "default" : "secondary"}>
+                          <h3 className="font-semibold text-lg dark:text-foreground">{branch.name}</h3>
+                          <Badge variant={branch.isActive ? "default" : "secondary"} className={branch.isActive ? "dark:bg-primary dark:text-primary-foreground" : "dark:bg-muted dark:text-muted-foreground dark:border-border"}>
                             {branch.isActive ? "Activa" : "Inactiva"}
                           </Badge>
                         </div>
@@ -273,6 +273,7 @@ export default function BranchesPage() {
                               setSelectedBranch(branch);
                               setIsDialogOpen(true);
                             }}
+                            className="dark:border-border dark:text-foreground dark:hover:bg-muted"
                           >
                             Editar
                           </Button>
@@ -283,12 +284,13 @@ export default function BranchesPage() {
                               setSelectedBranch(branch);
                               setIsDeleteDialogOpen(true);
                             }}
+                            className="dark:bg-destructive dark:text-destructive-foreground dark:hover:bg-destructive/90"
                           >
                             Eliminar
                           </Button>
                         </div>
                       </div>
-                      <div className="space-y-2 text-sm text-gray-500">
+                      <div className="space-y-2 text-sm text-gray-500 dark:text-gray-400">
                         <div className="flex items-center gap-2">
                           <Building2 className="h-4 w-4" />
                           <span>{branch.address}</span>

@@ -4,6 +4,8 @@ import { Button } from "@/components/ui/button";
 import { customToast } from "@/app/components/ui/custom-toast";
 import { PlansService } from '@/services/plans.service';
 import { Plan } from '@/types/plans';
+import { AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription, AlertDialogFooter, AlertDialogCancel, AlertDialogAction } from "@/components/ui/alert-dialog";
+import { Spinner } from "@/components/ui/spinner";
 
 interface DeleteDialogProps {
   open: boolean;
@@ -13,13 +15,13 @@ interface DeleteDialogProps {
 }
 
 export function DeleteDialog({ open, onOpenChange, plan, onSuccess }: DeleteDialogProps) {
-  const [loading, setLoading] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const plansService = useMemo(() => new PlansService(), []);
 
   const handleDelete = async () => {
     if (!plan || !plan.id) return;
     
-    setLoading(true);
+    setIsSubmitting(true);
     try {
       await plansService.delete(plan.id);
 
@@ -36,36 +38,34 @@ export function DeleteDialog({ open, onOpenChange, plan, onSuccess }: DeleteDial
         description: error.message || "No se pudo eliminar el plan"
       });
     } finally {
-      setLoading(false);
+      setIsSubmitting(false);
     }
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>Eliminar Plan</DialogTitle>
-          <DialogDescription>
-            ¿Estás seguro de que deseas eliminar el plan "{plan?.planName}"? Esta acción no se puede deshacer.
-          </DialogDescription>
-        </DialogHeader>
-        <div className="flex justify-end space-x-2">
-          <Button 
-            variant="outline" 
-            onClick={() => onOpenChange(false)}
-            disabled={loading}
-          >
-            Cancelar
-          </Button>
-          <Button 
-            variant="destructive" 
+    <AlertDialog open={open} onOpenChange={onOpenChange}>
+      <AlertDialogContent className="dark:bg-gray-900 dark:border-gray-800">
+        <AlertDialogHeader>
+          <AlertDialogTitle className="dark:text-gray-100">¿Estás absolutamente seguro?</AlertDialogTitle>
+          <AlertDialogDescription className="dark:text-gray-400">
+            Esta acción no se puede deshacer. Esto eliminará permanentemente el plan 
+            <span className="font-medium text-foreground dark:text-gray-200">{plan?.planName || 'seleccionado'}</span>.
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel className="dark:text-gray-300 dark:border-gray-600 dark:hover:bg-gray-800">Cancelar</AlertDialogCancel>
+          <AlertDialogAction
             onClick={handleDelete}
-            disabled={loading}
+            disabled={isSubmitting}
+            className="bg-red-600 hover:bg-red-700 dark:bg-red-700 dark:hover:bg-red-800 dark:text-white"
           >
-            {loading ? 'Eliminando...' : 'Eliminar'}
-          </Button>
-        </div>
-      </DialogContent>
-    </Dialog>
+            {isSubmitting ? (
+              <Spinner size="sm" className="mr-2" />
+            ) : null}
+            {isSubmitting ? 'Eliminando...' : 'Eliminar Plan'}
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
   );
 } 

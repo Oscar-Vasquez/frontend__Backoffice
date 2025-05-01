@@ -11,7 +11,7 @@ export default function OperatorTypesLayout({
   children: React.ReactNode;
 }) {
   return (
-    <div className="min-h-screen bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-sky-50 via-slate-50 to-zinc-50">
+    <div className="min-h-screen bg-background">
       {children}
     </div>
   );

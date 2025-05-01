@@ -1,13 +1,20 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import * as z from "zod";
+import { useForm } from 'react-hook-form';
 import { customToast } from "@/app/components/ui/custom-toast";
+import { Spinner } from '@/components/ui/spinner';
 import { useRouter } from "next/navigation";
+import { provincesData } from '@/utils/provinces';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 // ID de compañía que queremos usar
 const COMPANY_ID = "ea4af179-bfe1-4c6d-ad21-1c836377ff84";
@@ -21,13 +28,15 @@ interface Branch {
   isActive: boolean;
 }
 
-interface BranchFormData {
-  name: string;
-  address: string;
-  province: string;
-  phone: string;
-  isActive: boolean;
-}
+const branchFormSchema = z.object({
+  name: z.string().min(1, { message: "El nombre es requerido." }),
+  address: z.string().min(1, { message: "La dirección es requerida." }),
+  province: z.string().min(1, { message: "La provincia es requerida." }),
+  phone: z.string().min(1, { message: "El teléfono es requerido." }),
+  isActive: z.boolean().default(true),
+});
+
+type BranchFormValues = z.infer<typeof branchFormSchema>;
 
 interface BranchDialogProps {
   open: boolean;
@@ -39,138 +48,92 @@ interface BranchDialogProps {
 export function BranchDialog({ open, onOpenChange, branch, onSuccess }: BranchDialogProps) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
-  const [formData, setFormData] = useState<BranchFormData>({
-    name: '',
-    address: '',
-    province: '',
-    phone: '',
-    isActive: true
+  const form = useForm<BranchFormValues>({
+    resolver: zodResolver(branchFormSchema),
+    defaultValues: {
+      name: '',
+      address: '',
+      province: '',
+      phone: '',
+      isActive: true,
+    },
   });
-  const [errors, setErrors] = useState<Record<string, string>>({});
 
   useEffect(() => {
     if (branch) {
-      setFormData({
+      form.reset({
         name: branch.name || '',
         address: branch.address || '',
         province: branch.province || '',
         phone: branch.phone || '',
-        isActive: branch.isActive ?? true
+        isActive: branch.isActive !== undefined ? branch.isActive : true,
       });
     } else {
-      // Inicializar con valores vacíos
-      setFormData({
+      form.reset({
         name: '',
         address: '',
         province: '',
         phone: '',
-        isActive: true
+        isActive: true,
       });
     }
-    // Clear errors when dialog opens with new data
-    setErrors({});
-  }, [branch, open]);
+  }, [branch, open, form]);
 
-  const validateForm = (): boolean => {
-    const newErrors: Record<string, string> = {};
-    
-    if (!formData.name.trim()) {
-      newErrors.name = "El nombre es obligatorio";
-    }
-    
-    if (!formData.address.trim()) {
-      newErrors.address = "La dirección es obligatoria";
-    }
-    
-    if (!formData.province.trim()) {
-      newErrors.province = "La provincia es obligatoria";
-    }
-    
-    if (!formData.phone.trim()) {
-      newErrors.phone = "El teléfono es obligatorio";
-    } else if (!/^[0-9+\-\s()]+$/.test(formData.phone)) {
-      newErrors.phone = "El formato del teléfono no es válido";
-    }
-    
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    if (!validateForm()) {
-      return;
-    }
-    
+  const onSubmit = async (data: BranchFormValues) => {
     setLoading(true);
-
     try {
-      // Obtener la URL base de la API
-      const baseUrl = process.env.NEXT_PUBLIC_API_URL;
-      if (!baseUrl) {
-        throw new Error("La URL de la API no está configurada");
+      const token = localStorage.getItem('workexpress_token');
+      if (!token) {
+        router.push('/auth/login');
+        throw new Error('Token no encontrado');
       }
-      
-      // Solo enviar los campos estándar que espera el modelo Prisma
-      const requestData = {
-        name: formData.name,
-        address: formData.address,
-        province: formData.province,
-        phone: formData.phone,
-        is_active: formData.isActive,
-        // No incluimos company_id ya que el backend lo sobrescribe
-      };
-      
-      // URL para la operación actual (crear o actualizar)
-      const url = branch
-        ? `${baseUrl}/branches/${branch.id}`
-        : `${baseUrl}/branches`;
-        
-      console.log('📤 Enviando solicitud a:', url);
-      console.log('📦 Datos de la solicitud:', requestData);
 
-      // Enviar la solicitud
-      const response = await fetch(url, {
-        method: branch ? 'PATCH' : 'POST',
+      const apiUrl = branch
+        ? `${process.env.NEXT_PUBLIC_API_URL}/branches/${branch.id}`
+        : `${process.env.NEXT_PUBLIC_API_URL}/branches`;
+
+      const method = branch ? 'PUT' : 'POST';
+
+      // Enviar datos al backend en el formato esperado (is_active)
+      const payload = {
+        name: data.name,
+        address: data.address,
+        province: data.province,
+        phone: data.phone,
+        is_active: data.isActive, // Convertir isActive a is_active
+      };
+
+      const response = await fetch(apiUrl, {
+        method,
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('workexpress_token')}`
+          'Authorization': `Bearer ${token}`,
         },
-        body: JSON.stringify(requestData)
+        body: JSON.stringify(payload),
       });
 
-      console.log('📥 Estado de la respuesta:', response.status);
+      if (response.status === 401) {
+        router.push('/auth/login');
+        throw new Error('No autorizado');
+      }
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
-        console.error('❌ Error en la respuesta de la API:', errorData);
-        
-        // Proporcionar información detallada sobre el error
-        let errorMsg = errorData.message || `Error al ${branch ? 'actualizar' : 'crear'} la sucursal`;
-        
-        if (errorData.message && errorData.message.includes('Foreign key constraint violated: `fk_branches_company')) {
-          errorMsg += ". El backend está intentando usar un company_id que no existe en la base de datos. Por favor, contacta al administrador para configurar DEFAULT_COMPANY_ID en el backend o crear una compañía con ID 00000000-0000-0000-0000-000000000000.";
-        }
-        
-        throw new Error(errorMsg);
+        throw new Error(errorData.message || 'Error al guardar la sucursal');
       }
 
-      const responseData = await response.json();
-      console.log('✅ Datos de la respuesta:', responseData);
-      
       customToast.success({
         title: branch ? "Sucursal Actualizada" : "Sucursal Creada",
-        description: branch ? "La sucursal se actualizó correctamente" : "La sucursal se creó correctamente"
+        description: `La sucursal ${data.name} ha sido ${branch ? 'actualizada' : 'creada'} con éxito.`,
       });
 
-      onSuccess();
-      onOpenChange(false);
+      onSuccess(); // Actualiza la lista de sucursales en la página principal
+      onOpenChange(false); // Cierra el diálogo
     } catch (error) {
-      console.error('❌ Error:', error);
+      console.error('Error submitting branch:', error);
       customToast.error({
         title: "Error",
-        description: error instanceof Error ? error.message : `No se pudo ${branch ? 'actualizar' : 'crear'} la sucursal`
+        description: error instanceof Error ? error.message : 'No se pudo guardar la sucursal.',
       });
     } finally {
       setLoading(false);
@@ -178,107 +141,109 @@ export function BranchDialog({ open, onOpenChange, branch, onSuccess }: BranchDi
   };
 
   return (
-    <Dialog open={open} onOpenChange={(isOpen) => {
-      if (!loading) {
-        onOpenChange(isOpen);
-      }
-    }}>
-      <DialogContent>
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-[525px] dark:bg-background dark:border-border">
         <DialogHeader>
-          <DialogTitle>{branch ? 'Editar Sucursal' : 'Nueva Sucursal'}</DialogTitle>
+          <DialogTitle className="dark:text-foreground">{branch ? "Editar Sucursal" : "Crear Nueva Sucursal"}</DialogTitle>
+          <DialogDescription className="dark:text-muted-foreground">
+            {branch ? "Actualiza los detalles de la sucursal." : "Completa los campos para crear una nueva sucursal."}
+          </DialogDescription>
         </DialogHeader>
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="name" className={errors.name ? "text-destructive" : ""}>Nombre</Label>
-            <Input
-              id="name"
-              value={formData.name}
-              onChange={(e) => {
-                setFormData(prev => ({ ...prev, name: e.target.value }));
-                if (errors.name) {
-                  setErrors(prev => ({ ...prev, name: '' }));
-                }
-              }}
-              className={errors.name ? "border-destructive" : ""}
-              required
+        <Form {...form}>
+          <form onSubmit={form.handleSubmit(onSubmit)} className="grid gap-6 py-4">
+            <FormField
+              control={form.control}
+              name="name"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="dark:text-foreground">Nombre</FormLabel>
+                  <FormControl>
+                    <Input placeholder="Nombre de la sucursal" {...field} className="dark:bg-input dark:border-input dark:text-foreground dark:placeholder:text-muted-foreground" />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
             />
-            {errors.name && <p className="text-sm font-medium text-destructive">{errors.name}</p>}
-          </div>
-          
-          <div className="space-y-2">
-            <Label htmlFor="address" className={errors.address ? "text-destructive" : ""}>Dirección</Label>
-            <Input
-              id="address"
-              value={formData.address}
-              onChange={(e) => {
-                setFormData(prev => ({ ...prev, address: e.target.value }));
-                if (errors.address) {
-                  setErrors(prev => ({ ...prev, address: '' }));
-                }
-              }}
-              className={errors.address ? "border-destructive" : ""}
-              required
+            <FormField
+              control={form.control}
+              name="address"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="dark:text-foreground">Dirección</FormLabel>
+                  <FormControl>
+                    <Input placeholder="Dirección completa" {...field} className="dark:bg-input dark:border-input dark:text-foreground dark:placeholder:text-muted-foreground" />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
             />
-            {errors.address && <p className="text-sm font-medium text-destructive">{errors.address}</p>}
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="province" className={errors.province ? "text-destructive" : ""}>Provincia</Label>
-            <Input
-              id="province"
-              value={formData.province}
-              onChange={(e) => {
-                setFormData(prev => ({ ...prev, province: e.target.value }));
-                if (errors.province) {
-                  setErrors(prev => ({ ...prev, province: '' }));
-                }
-              }}
-              className={errors.province ? "border-destructive" : ""}
-              required
+            <FormField
+              control={form.control}
+              name="province"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="dark:text-foreground">Provincia</FormLabel>
+                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <FormControl>
+                      <SelectTrigger className="dark:bg-input dark:border-input dark:text-foreground">
+                        <SelectValue placeholder="Selecciona una provincia" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent className="dark:bg-popover dark:text-popover-foreground dark:border-border">
+                      {provincesData.map((province) => (
+                        <SelectItem key={province.value} value={province.value} className="dark:hover:bg-muted">
+                          {province.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
             />
-            {errors.province && <p className="text-sm font-medium text-destructive">{errors.province}</p>}
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="phone" className={errors.phone ? "text-destructive" : ""}>Teléfono</Label>
-            <Input
-              id="phone"
-              value={formData.phone}
-              onChange={(e) => {
-                setFormData(prev => ({ ...prev, phone: e.target.value }));
-                if (errors.phone) {
-                  setErrors(prev => ({ ...prev, phone: '' }));
-                }
-              }}
-              className={errors.phone ? "border-destructive" : ""}
-              required
+            <FormField
+              control={form.control}
+              name="phone"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="dark:text-foreground">Teléfono</FormLabel>
+                  <FormControl>
+                    <Input type="tel" placeholder="Número de teléfono" {...field} className="dark:bg-input dark:border-input dark:text-foreground dark:placeholder:text-muted-foreground" />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
             />
-            {errors.phone && <p className="text-sm font-medium text-destructive">{errors.phone}</p>}
-          </div>
-
-          <div className="flex items-center space-x-2">
-            <Switch
-              id="isActive"
-              checked={formData.isActive}
-              onCheckedChange={(checked) => setFormData(prev => ({ ...prev, isActive: checked }))}
+            <FormField
+              control={form.control}
+              name="isActive"
+              render={({ field }) => (
+                <FormItem className="flex flex-row items-center justify-between rounded-lg border dark:border-border p-3 shadow-sm dark:bg-input">
+                  <div className="space-y-0.5">
+                    <FormLabel className="dark:text-foreground">Estado Activo</FormLabel>
+                    <p className="text-sm text-muted-foreground dark:text-muted-foreground">
+                      Indica si la sucursal está operativa.
+                    </p>
+                  </div>
+                  <FormControl>
+                    <Switch
+                      checked={field.value}
+                      onCheckedChange={field.onChange}
+                      className="data-[state=checked]:bg-primary data-[state=unchecked]:bg-input"
+                    />
+                  </FormControl>
+                </FormItem>
+              )}
             />
-            <Label htmlFor="isActive">Sucursal Activa</Label>
-          </div>
-
-          <div className="flex justify-end space-x-2">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => onOpenChange(false)}
-              disabled={loading}
-            >
-              Cancelar
-            </Button>
-            <Button type="submit" disabled={loading}>
-              {loading ? 'Guardando...' : branch ? 'Actualizar' : 'Crear'}
-            </Button>
-          </div>
-        </form>
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={() => onOpenChange(false)} className="dark:text-foreground dark:border-border dark:hover:bg-muted">Cancelar</Button>
+              <Button type="submit" disabled={loading}>
+                {loading ? <Spinner size="sm" className="mr-2" /> : null}
+                {branch ? "Guardar Cambios" : "Crear Sucursal"}
+              </Button>
+            </DialogFooter>
+          </form>
+        </Form>
       </DialogContent>
     </Dialog>
   );

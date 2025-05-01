@@ -37,7 +37,7 @@ function TrackingDetail() {
       peso: '12.5 kg',
       dimensiones: '60x40x30 cm',
       tipo: 'Frágil',
-      valor: '€250.00'
+      valor: '$250.00'
     },
     progreso: [
       { estado: 'Recogido', completado: true, tiempo: '08:30' },

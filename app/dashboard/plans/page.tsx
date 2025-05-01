@@ -116,7 +116,7 @@ export default function PlansPage() {
       <div className="flex justify-between items-center mb-8">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Planes</h1>
-          <p className="text-muted-foreground mt-2">
+          <p className="text-muted-foreground dark:text-gray-400 mt-2">
             Sistema de gestión de planes
           </p>
         </div>
@@ -142,10 +142,10 @@ export default function PlansPage() {
           value={selectedProvince}
           onValueChange={setSelectedProvince}
         >
-          <SelectTrigger className="w-full sm:w-[200px]">
+          <SelectTrigger className="w-full sm:w-[200px] dark:bg-gray-800 dark:border-gray-700 dark:text-gray-300">
             <SelectValue placeholder="Todas las sucursales" />
           </SelectTrigger>
-          <SelectContent>
+          <SelectContent className="dark:bg-gray-800 dark:border-gray-700 dark:text-gray-300">
             <SelectItem value="todas">Todas las sucursales</SelectItem>
             {provinces.filter(Boolean).map(province => (
               <SelectItem key={province} value={province}>
@@ -163,13 +163,13 @@ export default function PlansPage() {
       ) : (
         <div className="space-y-8">
           {Object.entries(plansByProvince).map(([province, provincePlans]) => (
-            <div key={province} className="bg-white rounded-xl shadow-sm overflow-hidden">
-              <div className="px-6 py-4 bg-gradient-to-r from-[#2c2c2c]/10 to-transparent border-b">
+            <div key={province} className="bg-white dark:bg-gray-900 rounded-xl shadow-sm overflow-hidden border dark:border-gray-800">
+              <div className="px-6 py-4 bg-gradient-to-r from-gray-100/50 dark:from-gray-800/50 to-transparent border-b dark:border-gray-800">
                 <div className="flex items-center justify-between">
-                  <h2 className="text-xl font-semibold text-gray-800">
+                  <h2 className="text-xl font-semibold text-gray-800 dark:text-gray-200">
                     {province}
                   </h2>
-                  <Badge variant="secondary">
+                  <Badge variant="secondary" className="dark:bg-gray-700 dark:text-gray-300 dark:border-gray-600">
                     {provincePlans.length} {provincePlans.length === 1 ? 'plan' : 'planes'}
                   </Badge>
                 </div>
@@ -180,7 +180,7 @@ export default function PlansPage() {
                   {provincePlans.map((plan) => (
                     <div
                       key={plan.id}
-                      className="group relative bg-white rounded-lg border shadow-sm hover:shadow-md transition-all duration-200"
+                      className="group relative bg-white dark:bg-gray-800/50 rounded-lg border dark:border-gray-700 shadow-sm hover:shadow-md dark:hover:bg-gray-800 transition-all duration-200"
                     >
                       <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
                         <div className="flex gap-1">
@@ -188,7 +188,7 @@ export default function PlansPage() {
                             variant="ghost"
                             size="sm"
                             onClick={() => handleEdit(plan)}
-                            className="h-8 w-8 p-0"
+                            className="h-8 w-8 p-0 hover:bg-gray-100 dark:hover:bg-gray-700"
                           >
                             <Pencil className="h-4 w-4" />
                           </Button>
@@ -196,7 +196,7 @@ export default function PlansPage() {
                             variant="ghost"
                             size="sm"
                             onClick={() => handleDelete(plan)}
-                            className="h-8 w-8 p-0 text-red-500 hover:text-red-600"
+                            className="h-8 w-8 p-0 text-red-500 hover:text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:text-red-300 dark:hover:bg-red-900/20"
                           >
                             <Trash2 className="h-4 w-4" />
                           </Button>
@@ -211,14 +211,14 @@ export default function PlansPage() {
                           {plan.isActive ? "Activo" : "Inactivo"}
                         </Badge>
                         <h3 className="font-semibold text-lg mb-2">{plan.planName}</h3>
-                        <p className="text-sm text-gray-500 mb-4 line-clamp-2">
+                        <p className="text-sm text-gray-500 dark:text-gray-400 mb-4 line-clamp-2">
                           {plan.description}
                         </p>
                         <div className="flex items-baseline">
-                          <span className="text-2xl font-bold text-gray-900">
+                          <span className="text-2xl font-bold text-gray-900 dark:text-gray-100">
                             ${typeof plan.price === 'string' ? parseFloat(plan.price).toFixed(2) : plan.price.toFixed(2)}
                           </span>
-                          <span className="text-gray-500 ml-1 text-sm">USD</span>
+                          <span className="text-gray-500 dark:text-gray-400 ml-1 text-sm">USD</span>
                         </div>
                       </div>
                     </div>
